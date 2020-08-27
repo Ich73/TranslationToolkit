@@ -253,7 +253,7 @@ def menu():
 	option('S', 'Send via FTP')
 	info('Sends the contents of the in the \'D\' script generated folder to the 3DS so luma can patch them. Only updated files will be send.')
 	option('RF', 'Replace Files')
-	info('Searches the given destination folder for files with the same filename as the files the given source folder and replaces them. This can be used to update multiple .bclim files at once when editing .arc files.')
+	info('Searches the given destination folder for files with the same name as the files in the given source folder and replaces them. This can be used to update multiple .bclim files at once when editing .arc files.')
 	
 	category('Options')
 	option('-f', 'Force Override All Files (e.g. \'AP -f\')')
