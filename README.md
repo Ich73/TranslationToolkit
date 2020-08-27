@@ -3,7 +3,11 @@ Translation Toolkit is a command line interface to simplify the workflow for tra
 It is especially designed for the [DQM2-FanTranslation](https://github.com/Ich73/DQM2-FanTranslation) project.
 
 ## Using Translation Toolkit
-You can download the newest version as an executable from the [Release Page](https://github.com/Ich73/TranslationToolkit/releases/latest). Copy `TranslationToolkit.exe` to the root of your translation directory and run it.
+You can download the newest version as an executable from the [Release Page](https://github.com/Ich73/TranslationToolkit/releases/latest). Copy `TranslationToolkit.exe` to the root of your translation directory.  
+
+Addionally you need `xdelta.exe` which is included in [xdelta UI](http://www.romhacking.net/utilities/598/). Copy this file to the same folder.
+  
+You can now run `TranslationToolkit.exe` by double clicking it.
 
 
 ## Scripts
