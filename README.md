@@ -30,7 +30,7 @@ _Options:_
   * `-o=<XY>`: Set the original language to `<XY>` (e.g. `CP -o=JA`).
 
 ### Distribute (D)
-This script is used to copy all edited game files to a folder that matches the file structure of an extracted `.cia` or `.3ds` file. You can use this to either copy it to your extracted game to create a patched `.cia` or `.3ds` file, or use the [S]() script to send the files to your 3DS so [Luma](https://github.com/LumaTeam/Luma3DS) can patch them.  
+This script is used to copy all edited game files to a folder that matches the file structure of an extracted `.cia` or `.3ds` file. You can use this to either copy it to your extracted game to create a patched `.cia` or `.3ds` file, or use the [S](#send-via-ftp-s) script to send the files to your 3DS so [Luma](https://github.com/LumaTeam/Luma3DS) can patch them.  
   
 The script requires you to specify a single language (e.g.`EN`) or multiple languages (e.g. `DE,EN`) to distribute. If you specify multiple languages the translations of the first language are used whenever possible. The other languages are used when translations are missing. This works line-by-line for `.binJ` files (if `.patJ` files are found) and file-by-file for all other file types.  
   
@@ -41,7 +41,7 @@ _Options:_
   * `-o=<XY>`: Set the original language to `<XY>` (e.g. `D -o=JA`).
 
 ### Send via FTP (S)
-This script is used to send the with the [D]() script generated folder to 3DS so [Luma](https://github.com/LumaTeam/Luma3DS) can patch the game. For this to work your 3DS needs a FTP Server application, for example [FTPD](https://github.com/mtheall/), and your 3DS and your PC need to be connected to the same network.  
+This script is used to send the with the [D](#distribute-d) script generated folder to 3DS so [Luma](https://github.com/LumaTeam/Luma3DS) can patch the game. For this to work your 3DS needs a FTP Server application, for example [FTPD](https://github.com/mtheall/), and your 3DS and your PC need to be connected to the same network.  
   
 The script requires you to specify the following values to properly send the files:
   * `Title ID`: The ID of the game you want to patch.
