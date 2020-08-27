@@ -1,0 +1,11 @@
+*
+!*/
+!Resources/Images/*.ico
+!/.gitignore
+!/LICENSE
+!/README.md
+!/FileReplacer.py
+!/SendViaFTP.py
+!/TranslationPatcher.py
+!/TranslationToolkit.py
+!/TranslationToolkit.spec
