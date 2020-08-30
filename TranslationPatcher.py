@@ -222,8 +222,7 @@ def applyPatJPatches(original_language, force_override):
 		# find corresponding original file
 		orig_file = join(orig_folder, *simplename[:-1], splitext(simplename[-1])[0] + '.binJ')
 		if not exists(orig_file):
-			if VERBOSE >= 1: print(msg_prefix)
-			if VERBOSE >= 1: print(' !', 'Warning: Original File Not Found!')
+			if VERBOSE >= 1: print(' !', 'Warning: Original File Not Found:', join(*extpath(orig_file)))
 			continue
 		
 		# define output file
@@ -284,8 +283,7 @@ def applyXDeltaPatches(original_language, force_override):
 		# find corresponding original file
 		orig_file = join(orig_folder, *simplename)
 		if not exists(orig_file):
-			if VERBOSE >= 1: print(msg_prefix)
-			if VERBOSE >= 1: print(' !', 'Warning: Original File Not Found!')
+			print(' !', 'Warning: Original File Not Found:', join(*simplename))
 			continue
 		
 		# define output file
@@ -373,8 +371,7 @@ def createXDeltaPatches(original_language, force_override):
 		# find corresponding original file
 		orig_file = join(orig_folder, *simplename)
 		if not exists(orig_file):
-			if VERBOSE >= 1: print(msg_prefix)
-			if VERBOSE >= 1: print(' !', 'Warning: Original File Not Found!')
+			if VERBOSE >= 1: print(' !', 'Warning: Original File Not Found:', join(*simplename))
 			continue
 		
 		# define patch file
@@ -568,7 +565,7 @@ def distributeOtherFiles(languages, original_language, destination_dir, force_ov
 		
 		# remove files that are the same as the original files
 		orig_folder = '%s_%s' % (folder, original_language)
-		files = [(f, s) for f, s in files if hash(join(orig_folder, *s)) != hash(f)]
+		files = [(f, s) for f, s in files if not exists(join(orig_folder, *s)) or hash(join(orig_folder, *s)) != hash(f)]
 		if VERBOSE >= 2 or VERBOSE >= 1 and len(files) > 0: print(folder, '[%d]' % len(files))
 		
 		# copy collected files
