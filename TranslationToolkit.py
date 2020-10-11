@@ -6,6 +6,8 @@
 from os import system, listdir
 from os.path import join, exists
 import json
+import webbrowser
+from urllib.request import urlopen
 
 from TranslationPatcher import applyPatches, createPatches, distribute
 from SendViaFTP import sendRomFiles
@@ -14,7 +16,7 @@ from FileReplacer import replaceFiles
 CONFIG_FILE = 'tt-config.json'
 
 VERSION = 'v1.0.0'
-REPOSITORY = r'https://github.com/Ich73/TranslationToolkit'
+REPOSITORY = r'Ich73/TranslationToolkit'
 
 
 ###########
@@ -51,6 +53,54 @@ class Config:
 	def set(key, value):
 		Config.cfg[key] = value
 		Config.saveConfig()
+
+#############
+## Updates ##
+#############
+
+def checkUpdates():
+	try:
+		# query api
+		latest = r'https://api.github.com/repos/%s/releases/latest' % REPOSITORY
+		with urlopen(latest, timeout = 1) as url:
+			data = json.loads(url.read().decode())
+		tag = data['tag_name']
+		link = data['html_url']
+		
+		# compare versions
+		def ver2int(s):
+			if s[0] == 'v': s = s[1:]
+			v = s.split('.')
+			return sum([int(k) * 100**(len(v)-i) for i, k in enumerate(v)])
+		current_version = ver2int(VERSION)
+		tag_version     = ver2int(tag)
+		ignore_version  = ver2int(Config.get('ignoreVersion', 'v0.0.0'))
+		if current_version >= tag_version or ignore_version >= tag_version: return
+		
+		# show message
+		printTitleBox()
+		print(' '*m + 'A new version of Translation Toolkit is available.')
+		print()
+		print(' '*m + 'Current Version: %s' % VERSION)
+		print(' '*m + 'New Version:     %s' % tag)
+		print()
+		printCategory('Options')
+		printOption('D', 'Download the latest release')
+		printOption('C', 'Continue with the current version')
+		printOption('I', 'Ignore version %s' % tag)
+		print()
+		print('-'*(w+m+4+m))
+		print()
+		
+		# parse command
+		print('Enter command:')
+		command = input('>> ').strip()
+		script = command.upper() if command else ''
+		
+		if script == 'D': webbrowser.open(link)
+		elif script == 'C': pass
+		elif script == 'I': Config.set('ignoreVersion', tag)
+	except Exception: pass
 
 
 #############
@@ -204,60 +254,61 @@ def RF():
 ## Menu ##
 ##########
 
-def menu():
-	## Setup Screen ##
-	
+m = 2 # left margin
+w = 100 # width of title box
+
+def printTitleBox():
 	system('clear')
-	m = 2 # left margin
-	w = 100 # width of title box
-	system('mode con: cols=%d lines=%d' % (w+m+4+m, 43)) # SCREEN WIDTH AND HEIGHT
-	
-	## Print Title Box ##
-	
 	def title(msg=''): print(' '*m + '##' + ' '*int((w-len(msg))/2) + msg + ' '*(w-len(msg)-int((w-len(msg))/2)) + '##')
 	print()
 	title('#'*w)
 	title()
 	title('Translation Toolkit ' + VERSION)
-	title('(%s)' % REPOSITORY)
+	title('(https://github.com/%s)' % REPOSITORY)
 	title()
 	title('#'*w)
 	print()
+
+def printCategory(text):
+	print(' '*m + '~ ' + text + ' ~')
+	print()
+
+def printOption(cmd, text):
+	print(' '*m + '*', cmd, ':', text)
+
+def printInfo(text, width=90):
+	print(' '*(m+4), end=' ')
+	c = 0
+	for word in text.split():
+		if c + len(word) > width-m:
+			c = 0
+			print()
+			print(' '*(m+4), end=' ')
+		print(word, end=' ')
+		c += len(word) + 1
+	print()
+	print()
+
+def menu():
+	## Print Title and Options ##
 	
-	## Print Description ##
+	printTitleBox()
 	
-	def category(text):
-		print(' '*m + '~ ' + text + ' ~')
-		print()
-	def option(cmd, text): print(' '*m + '*', cmd, ':', text)
-	def info(text, width=90):
-		print(' '*(m+4), end=' ')
-		c = 0
-		for word in text.split():
-			if c + len(word) > width-m:
-				c = 0
-				print()
-				print(' '*(m+4), end=' ')
-			print(word, end=' ')
-			c += len(word) + 1
-		print()
-		print()
+	printCategory('Scripts')
+	printOption('AP', 'Apply Patches')
+	printInfo('Uses xdelta patches to patch files from the original game and saves them in the corresponding translation folders. Applies .patJ patches to .binJ files and updates .savJ files if found.')
+	printOption('CP', 'Create Patches')
+	printInfo('Creates xdelta patches for all edited game files and stores them in the corresponding translation folders. Creates .patJ patches from .savJ files if found.')
+	printOption('D', 'Distribute')
+	printInfo('Copies all edited game files to a given folder. The folder can then be used by the \'S\' script to send the files to the 3DS so luma can patch them. Or you can copy the folder to your extracted cia folder to create a translated cia file.')
+	printOption('S', 'Send via FTP')
+	printInfo('Sends the contents of the in the \'D\' script generated folder to the 3DS so luma can patch them. Only updated files are sent.')
+	printOption('RF', 'Replace Files')
+	printInfo('Searches the given destination folder for files with the same name as the files in the given source folder and replaces them. This can be used to update multiple .bclim files at once when editing .arc files.')
 	
-	category('Scripts')
-	option('AP', 'Apply Patches')
-	info('Uses xdelta patches to patch files from the original game and saves them in the corresponding translation folders. Applies .patJ patches to .binJ files and updates .savJ files if found.')
-	option('CP', 'Create Patches')
-	info('Creates xdelta patches for all edited game files and stores them in the corresponding translation folders. Creates .patJ patches from .savJ files if found.')
-	option('D', 'Distribute')
-	info('Copies all edited game files to a given folder. The folder can then be used by the \'S\' script to send the files to the 3DS so luma can patch them. Or you can copy the folder to your extracted cia folder to create a translated cia file.')
-	option('S', 'Send via FTP')
-	info('Sends the contents of the in the \'D\' script generated folder to the 3DS so luma can patch them. Only updated files are sent.')
-	option('RF', 'Replace Files')
-	info('Searches the given destination folder for files with the same name as the files in the given source folder and replaces them. This can be used to update multiple .bclim files at once when editing .arc files.')
-	
-	category('Options')
-	option('-f', 'Force Override All Files (e.g. \'AP -f\')')
-	option('-o=<XY>', 'Override Original Language (e.g. \'AP -o=JA\')')
+	printCategory('Options')
+	printOption('-f', 'Force Override All Files (e.g. \'AP -f\')')
+	printOption('-o=<XY>', 'Override Original Language (e.g. \'AP -o=JA\')')
 	
 	print()
 	print('-'*(w+m+4+m))
@@ -286,5 +337,11 @@ def menu():
 	elif script in ['EXIT', 'CLOSE', 'QUIT', ':Q']: return
 	else: menu()
 
-if __name__ == '__main__':
+def main():
+	system('clear')
+	system('mode con: cols=%d lines=%d' % (w+m+4+m, 43)) # SCREEN WIDTH AND HEIGHT
+	checkUpdates()
 	menu()
+
+if __name__ == '__main__':
+	main()
