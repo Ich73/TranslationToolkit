@@ -41,6 +41,7 @@ def sendRomFiles(source_dir, title_id, ip, port, user, passwd, force_override = 
 			PATH = basepath
 			
 			# for all source files
+			ctr = dict()
 			for src_filename in [join(dp, f) for dp, _, fn in walk(join(source_dir, 'ExtractedRomFS')) for f in fn]:
 				# calculate path and filename
 				dest_path, dest_filename = (tuple(normpath(src_filename).split(sep)[2:-1]), basename(src_filename))
@@ -61,17 +62,24 @@ def sendRomFiles(source_dir, title_id, ip, port, user, passwd, force_override = 
 						src_timestamp = localtime(getmtime(src_filename))
 						if dest_timestamp >= src_timestamp:
 							if VERBOSE >= 2: print(msg_prefix, 'keep')
+							ctr['keep'] = ctr.get('keep', 0) + 1
 							continue
 				
 				# send file
 				with open(src_filename, 'rb') as file:
 					if VERBOSE >= 1: print(msg_prefix, 'send')
+					ctr['send'] = ctr.get('send', 0) + 1
 					ftp.storbinary('STOR %s' % dest_filename, file)
 			
 			# quit connection
 			print()
 			print('Disconnect')
 			print('>>', ftp.quit())
+			
+			# summary
+			print()
+			if VERBOSE >= 1: print('Sent %d files.' % ctr['send'])
+			if VERBOSE >= 2: print('Kept %d files.' % ctr['keep'])
 	
 	except Exception as e:
 		print('Error:', str(e))
