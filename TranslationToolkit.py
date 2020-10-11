@@ -15,7 +15,7 @@ from FileReplacer import replaceFiles
 
 CONFIG_FILE = 'tt-config.json'
 
-VERSION = 'v1.0.0'
+VERSION = 'v1.1.0'
 REPOSITORY = r'Ich73/TranslationToolkit'
 
 
