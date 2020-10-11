@@ -251,7 +251,7 @@ def menu():
 	option('D', 'Distribute')
 	info('Copies all edited game files to a given folder. The folder can then be used by the \'S\' script to send the files to the 3DS so luma can patch them. Or you can copy the folder to your extracted cia folder to create a translated cia file.')
 	option('S', 'Send via FTP')
-	info('Sends the contents of the in the \'D\' script generated folder to the 3DS so luma can patch them. Only updated files will be send.')
+	info('Sends the contents of the in the \'D\' script generated folder to the 3DS so luma can patch them. Only updated files are sent.')
 	option('RF', 'Replace Files')
 	info('Searches the given destination folder for files with the same name as the files in the given source folder and replaces them. This can be used to update multiple .bclim files at once when editing .arc files.')
 	

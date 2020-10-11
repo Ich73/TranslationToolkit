@@ -24,9 +24,12 @@ def sendRomFiles(source_dir, title_id, ip, port, user, passwd, force_override = 
 		with FTP(timeout = 5) as ftp:
 			# connect and login
 			if VERBOSE >= 1: print('Connect to \'%s:%d\'' % (ip, port))
-			if VERBOSE >= 1: print('>>', ftp.connect(host = ip, port = port))
-			if VERBOSE >= 1: print('Login as \'%s\'' % user)
-			if VERBOSE >= 1: print('>>', ftp.login(user = user, passwd = passwd))
+			tmp = ftp.connect(host = ip, port = port)
+			if VERBOSE >= 1: print('>>', tmp)
+			if user:
+				if VERBOSE >= 1: print('Login as \'%s\'' % user)
+				tmp = ftp.login(user = user, passwd = passwd)
+				if VERBOSE >= 1: print('>>', tmp)
 			print()
 			
 			# enter basepath
