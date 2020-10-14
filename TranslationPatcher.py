@@ -19,7 +19,8 @@ from os.path import join, exists, splitext, dirname, basename, normpath
 from shutil import copyfile
 from hashlib import md5
 from zipfile import ZipFile
-from BinJEditor.JTools import parseBinJ, createBinJ, parseDatJ, createDatJ
+from gzip import GzipFile
+from BinJEditor.JTools import parseBinJ, createBinJ, parseE, createE, parseDatJ, createDatJ, parseDatE, parseTabE, parseSpt
 from tempfile import gettempdir as tempdir
 from subprocess import run
 
@@ -35,7 +36,7 @@ XDELTA_FOLDERS = {
 	'Battle':      ['.bcres'],
 	'Debug':       ['.bin'],
 	'Effect':      ['.bcres'],
-	'Event':       ['.gz', '.e'],
+	'Event':       ['.gz'],
 	'Field':       ['.gz', '.xbb', '.bcres'],
 	'Font':        ['.bcfnt'],
 	'KeyImage':    ['.bclim'],
@@ -48,8 +49,12 @@ XDELTA_FOLDERS = {
 	'PartsIcon':   ['.bclim'],
 	'Title':       ['.bcres'],
 }
-PATJ_FOLDERS = {
-	'Message': ['.savJ'],
+
+# folders to search for files, patches and saves
+PAT_FOLDERS = {
+	# folder: (mode, original, save, patch)
+	'Message': ('binJ', '.binJ', '.savJ', '.patJ'),
+	'Event':   ('e',    '.e',    '.savE', '.patE'),
 }
 
 # where to put the folders when distributing
@@ -114,7 +119,7 @@ def loopFiles(folders, original_language = None):
 				files = [join(dp, f) for dp, dn, fn in walk(edit_folder) for f in [n for n in fn if splitext(n)[1] in types]]
 				if VERBOSE >= 1: print('[%s]' % len(files))
 				for edit_file in files:
-					yield (edit_file, orig_folder)
+					yield (folder, edit_file, orig_folder)
 		
 		else:
 			# iterate over all languages found
@@ -125,7 +130,7 @@ def loopFiles(folders, original_language = None):
 				files = [join(dp, f) for dp, dn, fn in walk(edit_folder) for f in [n for n in fn if splitext(n)[1] in types]]
 				if VERBOSE >= 1: print('[%s]' % len(files))
 				for edit_file in files:
-					yield edit_file
+					yield (folder, edit_file)
 
 
 ###########
@@ -133,7 +138,7 @@ def loopFiles(folders, original_language = None):
 ###########
 
 def applyPatches(original_language = 'JA', force_override = False):
-	ctr  = applyPatJPatches(original_language, force_override)
+	ctr  = applyPatPatches(original_language, force_override)
 	ctr2 = applyXDeltaPatches(original_language, force_override)
 	for k, v in ctr2.items(): ctr[k] = ctr.get(k, 0) + v
 	print()
@@ -141,18 +146,24 @@ def applyPatches(original_language = 'JA', force_override = False):
 	if VERBOSE >= 1: print('Updated %d files.' % ctr.get('update', 0))
 	if VERBOSE >= 2: print('Kept %d files.' % ctr.get('keep',   0))
 
-def applyPatJPatches(original_language, force_override):
+def applyPatPatches(original_language, force_override):
 	""" Creates .binJ files from .patJ patches and the original .binJ file.
+		Creates .e    files from .patE patches and the original .e    file.
 		Creates .savJ files from .patJ patches and the old .savJ save file.
+		Creates .savE files from .patE patches and the old .savE save file.
 	"""
 	
-	def applyPatJToBinJ(orig_file, patch_file, output_file):
+	def applyPatToFile(orig_file, patch_file, output_file, mode):
 		# read original file
 		try:
-			with open(orig_file, 'rb') as file: binj = file.read()
-			prefix, orig_data = parseBinJ(binj, SEP)
+			if mode == 'binJ':
+				with open(orig_file, 'rb') as file: bin = file.read()
+				orig_data, extra = parseBinJ(bin, SEP)
+			elif mode == 'e':
+				with GzipFile(orig_file, 'r') as file: bin = file.read()
+				orig_data, extra = parseE(bin, SEP)
 		except:
-			print('Error: Parsing .binJ file failed.')
+			print('Error: Parsing %s file failed.' % mode)
 			return
 		# read patch file
 		with open(patch_file, 'r', encoding = 'ANSI') as file: patj = file.read()
@@ -165,18 +176,24 @@ def applyPatJPatches(original_language, force_override):
 		# patch data
 		output_data = [v if v else orig_data[i] for i, v in enumerate(edit_data)]
 		# save output file
-		binj = createBinJ(prefix, output_data, SEP)
-		with open(output_file, 'wb') as file: file.write(binj)
+		if mode == 'binJ':
+			bin = createBinJ(output_data, SEP, extra)
+			with open(output_file, 'wb') as file: file.write(bin)
+		elif mode == 'e':
+			bin = createE(output_data, SEP, extra)
+			with open(output_file, 'wb') as file:
+				with GzipFile(fileobj=file, mode='w', filename='', mtime=0) as gzipFile: gzipFile.write(bin)
 	
-	def applyPatJToSavJ(save_file, patch_file, output_file):
+	def applyPatToSav(save_file, patch_file, output_file):
 		# read save file
 		with ZipFile(save_file, 'r') as zip:
-			prefix = zip.read('prefix.bin')
 			origj = zip.read('orig.datJ').decode('ANSI')
 			sep_from_save = zip.read('SEP.bin')
 			specialj = zip.read('special.tabJ')
 			decodej = zip.read('decode.tabJ')
 			encodej = zip.read('encode.tabJ')
+			extra_files = sorted({info.filename for info in zip.infolist()} - {'orig.datJ', 'edit.datJ', 'SEP.bin', 'special.tabJ', 'decode.tabJ', 'encode.tabJ'})
+			extra = [zip.read(file) for file in extra_files]
 		orig_data = parseDatJ(origj)
 		# read patch file and override edit_data
 		with open(patch_file, 'r', encoding = 'ANSI') as file: patj = file.read()
@@ -189,8 +206,6 @@ def applyPatJPatches(original_language, force_override):
 		# save output file
 		origj = createDatJ(orig_data)
 		editj = createDatJ(edit_data)
-		prefix_filename = join(tempdir(), 'prefix.bin')
-		with open(prefix_filename, 'wb') as file: file.write(prefix)
 		orig_filename = join(tempdir(), 'orig.datJ')
 		with open(orig_filename, 'w', encoding = 'ANSI') as file: file.write(origj)
 		edit_filename = join(tempdir(), 'edit.datJ')
@@ -203,42 +218,48 @@ def applyPatJPatches(original_language, force_override):
 		with open(decode_filename, 'wb') as file: file.write(decodej)
 		encode_filename = join(tempdir(), 'encode.tabJ')
 		with open(encode_filename, 'wb') as file: file.write(encodej)
+		extra_filenames = [join(tempdir(), file) for file in extra_files]
+		for i, extra_filename in enumerate(extra_filenames):
+			with open(extra_filename, 'wb') as file: file.write(extra[i])
 		with ZipFile(output_file, 'w') as file:
-			file.write(prefix_filename, arcname=basename(prefix_filename))
 			file.write(orig_filename, arcname=basename(orig_filename))
 			file.write(edit_filename, arcname=basename(edit_filename))
 			file.write(sep_filename, arcname=basename(sep_filename))
 			file.write(special_filename, arcname=basename(special_filename))
 			file.write(decode_filename, arcname=basename(decode_filename))
 			file.write(encode_filename, arcname=basename(encode_filename))
-		remove(prefix_filename)
+			for extra_filename in extra_filenames:
+				file.write(extra_filename, arcname=basename(extra_filename))
 		remove(orig_filename)
 		remove(edit_filename)
 		remove(sep_filename)
 		remove(special_filename)
 		remove(decode_filename)
 		remove(encode_filename)
+		for extra_filename in extra_filenames:
+			remove(extra_filename)
 	
 	ctr = dict()
-	folders = dict(zip(PATJ_FOLDERS, ['.patJ']*len(PATJ_FOLDERS)))
-	for patch_file, orig_folder in loopFiles(folders, original_language):
+	folders = {k: v[3] for k, v in PAT_FOLDERS.items()}
+	for folder, patch_file, orig_folder in loopFiles(folders, original_language):
 		simplename = extpath(patch_file)
-		msg_prefix = ' * %s:' % join(*simplename[:-1], splitext(simplename[-1])[0] + '.binJ')
+		mode, ext_orig, ext_save, ext_patch = PAT_FOLDERS[folder]
+		msg_prefix = ' * %s:' % join(*simplename[:-1], splitext(simplename[-1])[0] + ext_orig)
 		
 		# find corresponding original file
-		orig_file = join(orig_folder, *simplename[:-1], splitext(simplename[-1])[0] + '.binJ')
+		orig_file = join(orig_folder, *simplename[:-1], splitext(simplename[-1])[0] + ext_orig)
 		if not exists(orig_file):
 			if VERBOSE >= 1: print(' !', 'Warning: Original File Not Found:', join(*extpath(orig_file)))
 			continue
 		
 		# define output file
-		output_file = patch_file[:-len('.patJ')]+'.binJ'
+		output_file = patch_file[:-len(ext_patch)] + ext_orig
 		
 		# check if output file already exists
 		if exists(output_file):
 			# create temporary output file
 			temp_output_file = output_file + '.temp'
-			applyPatJToBinJ(orig_file, patch_file, temp_output_file)
+			applyPatToFile(orig_file, patch_file, temp_output_file, mode)
 			# compare output files
 			if not force_override and hash(output_file) == hash(temp_output_file):
 				# equal -> keep old output file
@@ -255,17 +276,17 @@ def applyPatJPatches(original_language, force_override):
 			# create new output file
 			if VERBOSE >= 1: print(msg_prefix, 'create')
 			ctr['create'] = ctr.get('create', 0) + 1
-			applyPatJToBinJ(orig_file, patch_file, output_file)
+			applyPatToFile(orig_file, patch_file, output_file, mode)
 		
 		# define output save file
-		msg_prefix = ' * %s:' % join(*simplename[:-1], splitext(simplename[-1])[0] + '.savJ')
-		output_save_file = patch_file[:-len('.patJ')]+'.savJ'
+		msg_prefix = ' * %s:' % join(*simplename[:-1], splitext(simplename[-1])[0] + ext_save)
+		output_save_file = patch_file[:-len(ext_patch)] + ext_save
 		
 		# check if output save file exists
 		if exists(output_save_file):
 			# create temporary output save file
 			temp_output_save_file = output_save_file + '.temp'
-			applyPatJToSavJ(output_save_file, patch_file, temp_output_save_file)
+			applyPatToSav(output_save_file, patch_file, temp_output_save_file)
 			# compare save files
 			if not force_override and hashZip(output_save_file) == hashZip(temp_output_save_file):
 				# equal -> keep old save file
@@ -288,7 +309,7 @@ def applyXDeltaPatches(original_language, force_override):
 	
 	ctr = dict()
 	folders = dict(zip(XDELTA_FOLDERS.keys(), ['.xdelta']*len(XDELTA_FOLDERS)))
-	for patch_file, orig_folder in loopFiles(folders, original_language):
+	for _, patch_file, orig_folder in loopFiles(folders, original_language):
 		simplename = extpath(patch_file)
 		simplename[-1] = simplename[-1][:-len('.xdelta')]
 		msg_prefix = ' * %s:' % join(*simplename)
@@ -332,7 +353,7 @@ def applyXDeltaPatches(original_language, force_override):
 ############
 
 def createPatches(original_language = 'JA', force_override = False):
-	ctr  = createPatJPatches(force_override)
+	ctr  = createPatPatches(force_override)
 	ctr2 = createXDeltaPatches(original_language, force_override)
 	for k, v in ctr2.items(): ctr[k] = ctr.get(k, 0) + v
 	print()
@@ -342,32 +363,36 @@ def createPatches(original_language = 'JA', force_override = False):
 	if VERBOSE >= 2: print('Kept %d patches.' % ctr.get('keep',   0))
 	if VERBOSE >= 2: print('Skipped %d files.' % ctr.get('skip',   0))
 
-def createPatJPatches(force_override):
-	""" Creates .patJ patches from .savJ files. """
+def createPatPatches(force_override):
+	""" Creates .patJ patches from .savJ files.
+		Creates .patE patches from .savE files.
+	"""
 	
-	def createPatJ(savj_file, patj_file):
+	def createPat(save_file, patch_file):
 		# read edit data from save
-		with ZipFile(savj_file, 'r') as zip:
+		with ZipFile(save_file, 'r') as zip:
 			data = zip.read('edit.datJ').decode('ANSI')
 		# correct newlines
 		data = createDatJ(parseDatJ(data))
 		# save patch file
-		with open(patj_file, 'w', encoding = 'ANSI') as file:
+		with open(patch_file, 'w', encoding = 'ANSI') as file:
 			file.write(data)
 	
 	ctr = dict()
-	for edit_file in loopFiles(PATJ_FOLDERS):
+	folders = {k: v[2] for k, v in PAT_FOLDERS.items()}
+	for folder, edit_file in loopFiles(folders):
 		simplename = extpath(edit_file)
-		msg_prefix = ' * %s:' % join(*simplename[:-1], splitext(simplename[-1])[0]+'.patJ')
+		mode, ext_orig, ext_save, ext_patch = PAT_FOLDERS[folder]
+		msg_prefix = ' * %s:' % join(*simplename[:-1], splitext(simplename[-1])[0] + ext_patch)
 		
 		# define patch file
-		patch_file = splitext(edit_file)[0] + '.patJ'
+		patch_file = splitext(edit_file)[0] + ext_patch
 		
 		# check if patch already exists
 		if exists(patch_file):
 			# create temporary patch
 			temp_patch_file = patch_file + '.temp'
-			createPatJ(edit_file, temp_patch_file)
+			createPat(edit_file, temp_patch_file)
 			# compare patches
 			if not force_override and hash(patch_file) == hash(temp_patch_file):
 				# equal -> keep old patch
@@ -384,7 +409,7 @@ def createPatJPatches(force_override):
 			# create new patch
 			if VERBOSE >= 1: print(msg_prefix, 'create')
 			ctr['create'] = ctr.get('create', 0) + 1
-			createPatJ(edit_file, patch_file)
+			createPat(edit_file, patch_file)
 	return ctr
 
 def createXDeltaPatches(original_language, force_override):
@@ -394,7 +419,7 @@ def createXDeltaPatches(original_language, force_override):
 		run(['xdelta', '-f', '-s', orig_file, edit_file, patch_file])
 	
 	ctr = dict()
-	for edit_file, orig_folder in loopFiles(XDELTA_FOLDERS, original_language):
+	for _, edit_file, orig_folder in loopFiles(XDELTA_FOLDERS, original_language):
 		simplename = extpath(edit_file)
 		msg_prefix = ' * %s:' % join(*simplename[:-1], simplename[-1]+'.xdelta')
 		
@@ -450,7 +475,7 @@ def createXDeltaPatches(original_language, force_override):
 
 def distribute(languages, original_language = 'JA', destination_dir = '_dist', force_override = False):
 	if not isinstance(languages, tuple): languages = (languages,)
-	ctr  = distributeBinJFiles(languages, original_language, destination_dir, force_override)
+	ctr  = distributeBinJAndEFiles(languages, original_language, destination_dir, force_override)
 	ctr2 = distributeOtherFiles(languages, original_language, destination_dir, force_override)
 	for k, v in ctr2.items(): ctr[k] = ctr.get(k, 0) + v
 	print()
@@ -458,62 +483,90 @@ def distribute(languages, original_language = 'JA', destination_dir = '_dist', f
 	if VERBOSE >= 1: print('Updated %d files.' % ctr.get('update', 0))
 	if VERBOSE >= 2: print('Kept %d files.' % ctr.get('keep',   0))
 
-def distributeBinJFiles(languages, original_language, destination_dir, force_override):
+def distributeBinJAndEFiles(languages, original_language, destination_dir, force_override):
 	""" Creates .binJ files from different .savJ / .patJ / .binJ files (line by line)
-		and copys them to the given destination.
+		  and copies them to the destination.
+		Creates .e    files from different .savE / .patE / .e    files (line by line)
+		  and copies them to the destination.
 	"""
 	# Info: Does not support folders without a language extension
 	
 	def getData(filename):
 		ext = splitext(filename)[1]
-		# savJ -> get edit data
-		if ext == '.savJ':
+		# savJ/savE -> get edit data
+		if ext in ['.savJ', '.savE']:
 			with ZipFile(filename, 'r') as zip: datj = zip.read('edit.datJ').decode('ANSI')
 			return parseDatJ(datj)
-		# patJ -> read edit data
-		elif ext == '.patJ':
+		# patJ/patE -> read edit data
+		elif ext in ['.patJ', '.patE']:
 			with open(filename, 'r', encoding = 'ANSI') as file: patj = file.read()
 			return parseDatJ(patj)
-		# binJ -> read orig data
-		elif ext == '.binJ':
-			return getOrigData(filename)[1]
+		# binJ/e -> read orig data
+		elif ext in ['.binJ', '.e']:
+			return getOrigData(filename)[0]
 	
 	def getOrigData(filename):
 		ext = splitext(filename)[1]
-		# savJ -> get orig data and prefix
+		# savJ -> get orig data and extra
 		if ext == '.savJ':
 			with ZipFile(filename, 'r') as zip:
-				prefix = zip.read('prefix.bin')
 				datj = zip.read('orig.datJ').decode('ANSI')
-			return prefix, parseDatJ(datj)
-		# binJ -> read orig data and prefix
+				prefix = zip.read('prefix.bin')
+			return parseDatJ(datj), {'prefix': prefix}
+		# savE -> get orig data and extra
+		elif ext == '.savE':
+			with ZipFile(filename, 'r') as zip:
+				datj = zip.read('orig.datJ').decode('ANSI')
+				prefix = zip.read('prefix.bin')
+				header = zip.read('header.datE').decode('ASCII')
+				scripts = zip.read('scripts.spt').decode('ASCII')
+				links = zip.read('links.tabE').decode('ASCII')
+			header = parseDatE(header)
+			scripts = parseSpt(scripts)
+			links = parseTabE(links)
+			extra = {'prefix': prefix, 'header': header, 'scripts': scripts, 'links': links}
+			return parseDatJ(datj), extra
+		# binJ -> read orig data and extra
 		elif ext == '.binJ':
 			try:
-				with open(filename, 'rb') as file: binj = file.read()
-				return parseBinJ(binj, SEP)
+				with open(filename, 'rb') as file: bin = file.read()
+				return parseBinJ(bin, SEP)
 			except:
 				print('Error: Parsing .binJ file failed.')
 				return None, None
+		# e -> read orig data and extra
+		elif ext == '.e':
+			try:
+				with GzipFile(filename, 'r') as file: bin = file.read()
+				return parseE(bin, SEP)
+			except:
+				print('Error: Parsing .e file failed.')
+				return None, None
 	
-	def saveBinJ(filename, prefix, data):
-		binj = createBinJ(prefix, data, SEP)
-		with open(filename, 'wb') as file: file.write(binj)
+	def saveBinJ(filename, data, extra):
+		bin = createBinJ(data, SEP, extra)
+		with open(filename, 'wb') as file: file.write(bin)
+	
+	def saveE(filename, data, extra):
+		bin = createE(data, SEP, extra)
+		with open(filename, 'wb') as file:
+			with GzipFile(fileobj=file, mode='w', filename='', mtime=0) as gzipFile: gzipFile.write(bin)
 	
 	# iterate over all patj folders
 	ctr = dict()
-	for folder in PATJ_FOLDERS:
+	for folder, (mode, ext_orig, ext_save, ext_patch) in PAT_FOLDERS.items():
 		# collect all files ordered by priority language and priority type
 		files = dict() # dict of shortname (no first folder, no ext) -> list of files
 		for lang in languages:
-			for type in ['.savJ', '.patJ', '.binJ']:
+			for type in [ext_save, ext_patch, ext_orig]:
 				for file in [join(dp, f) for dp, dn, fn in walk('%s_%s' % (folder, lang)) for f in [n for n in fn if splitext(n)[1] == type]]:
 					shortname = join(*extpath(splitext(file)[0]))
 					files[shortname] = files.get(shortname, list()) + [(lang, type)]
 		
 		# add original files
-		for file in [join(dp, f) for dp, dn, fn in walk('%s_%s' % (folder, original_language)) for f in [n for n in fn if splitext(n)[1] == '.binJ']]:
+		for file in [join(dp, f) for dp, dn, fn in walk('%s_%s' % (folder, original_language)) for f in [n for n in fn if splitext(n)[1] == ext_orig]]:
 			shortname = join(*extpath(splitext(file)[0]))
-			files[shortname] = files.get(shortname, list()) + [(original_language, '.binJ')]
+			files[shortname] = files.get(shortname, list()) + [(original_language, ext_orig)]
 		
 		# only keep needed files
 		for shortname, file_list in files.items():
@@ -524,16 +577,16 @@ def distributeBinJFiles(languages, original_language, destination_dir, force_ove
 				else: f.append((lang, [type]))
 			
 			# last file must contain original data (savJ or binJ)
-			while '.savJ' not in f[-1][1] and '.binJ' not in f[-1][1]: del f[-1]
-			if '.patJ' in f[-1][1]: f[-1][1].remove('.patJ')
-			if '.savJ' in f[-1][1] and '.binJ' in f[-1][1]: f[-1][1].remove('.binJ')
+			while ext_save not in f[-1][1] and ext_orig not in f[-1][1]: del f[-1]
+			if ext_patch in f[-1][1]: f[-1][1].remove(ext_patch)
+			if ext_save in f[-1][1] and ext_orig in f[-1][1]: f[-1][1].remove(ext_orig)
 			
 			# keep best option for other languages
 			for _, types in f[:-1]: del types[1:]
 			
 			# remove languages if a previous language only contains a binJ
 			for i, (_, types) in enumerate(f):
-				if types == ['.binJ']: del f[i+1:]
+				if types == [ext_orig]: del f[i+1:]
 			
 			# remove files that only have the original data
 			if not any(lang != original_language for lang, _ in f):
@@ -550,8 +603,8 @@ def distributeBinJFiles(languages, original_language, destination_dir, force_ove
 		# create output files
 		dest_folder = join(destination_dir, PARENT_FOLDERS[folder])
 		for shortname, file_list in files.items():
-			msg_prefix = ' * %s.binJ:' % shortname
-			dest_file = join(dest_folder, shortname + '.binJ')
+			msg_prefix = ' * %s%s:' % (shortname, ext_orig)
+			dest_file = join(dest_folder, shortname + ext_orig)
 			
 			# collect data
 			data = None
@@ -559,14 +612,15 @@ def distributeBinJFiles(languages, original_language, destination_dir, force_ove
 				update_data = getData(file)
 				if data: data = [e if e else update_data[i] for i, e in enumerate(data)]
 				else: data = update_data
-			prefix, orig_data = getOrigData(file_list[-1])
+			orig_data, extra = getOrigData(file_list[-1])
 			if orig_data is None: continue
 			data = [e if e else orig_data[i] for i, e in enumerate(data)]
 			
 			# create temporary output file
 			temp_dest_file = dest_file + '.temp'
 			makedirs(dirname(dest_file), exist_ok=True)
-			saveBinJ(temp_dest_file, prefix, data)
+			if mode == 'binJ': saveBinJ(temp_dest_file, data, extra)
+			elif mode == 'e': saveE(temp_dest_file, data, extra)
 			
 			# check if file already exists
 			if exists(dest_file):

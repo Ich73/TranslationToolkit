@@ -280,7 +280,7 @@ def printInfo(text, width=90):
 	print(' '*(m+4), end=' ')
 	c = 0
 	for word in text.split():
-		if c + len(word) > width-m:
+		if c + len(word) > width-m-1:
 			c = 0
 			print()
 			print(' '*(m+4), end=' ')
@@ -296,9 +296,9 @@ def menu():
 	
 	printCategory('Scripts')
 	printOption('AP', 'Apply Patches')
-	printInfo('Uses xdelta patches to patch files from the original game and saves them in the corresponding translation folders. Applies .patJ patches to .binJ files and updates .savJ files if found.')
+	printInfo('Uses xdelta patches to patch files from the original game. Applies .patJ patches to .binJ files and updates .savJ files. Applies .patE patches to .e files and updates .savE files.')
 	printOption('CP', 'Create Patches')
-	printInfo('Creates xdelta patches for all edited game files and stores them in the corresponding translation folders. Creates .patJ patches from .savJ files if found.')
+	printInfo('Creates xdelta patches for all edited game files. Creates .patJ patches from .savJ files. Creates .patE patches from .savE files.')
 	printOption('D', 'Distribute')
 	printInfo('Copies all edited game files to a given folder. The folder can then be used by the \'S\' script to send the files to the 3DS so luma can patch them. Or you can copy the folder to your extracted cia folder to create a translated cia file.')
 	printOption('S', 'Send via FTP')
