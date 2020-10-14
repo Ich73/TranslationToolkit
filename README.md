@@ -12,10 +12,10 @@ You can now run `TranslationToolkit.exe` by double clicking it.
 
 ## Scripts
 ### Apply Patches (AP)
-This scripts is used to apply `.xdelta` and `.patJ` patches to all files from the original game.  
+This scripts is used to apply `.xdelta`, `.patJ` and `.patE` patches to all files from the original game.  
   
 It searches internally specified folders using the naming scheme `<folder>_<language>` (e.g. `Layout_EN`) for patches and applies them to the files with matching names from the folder `<folder>_<originalLanguage>` (e.g. `Layout_JA`).  
-A `<file>.<ext>.xdelta` patch will create `<file>.<ext>` and a `<file>.patJ` patch will create `<file>.binJ` and update `<file>.savJ` if found.  
+A `<file>.<ext>.xdelta` patch will create `<file>.<ext>`, a `<file>.patJ` patch will create `<file>.binJ` and update `<file>.savJ` if found and a `<file>.patE` patch will create `<file>.e` and update `<file>.savE` if found.  
 Only files with a different hash will be overriden by default. The default original language is `JA`.  
   
 _Options:_
@@ -23,10 +23,10 @@ _Options:_
   * `-o=<XY>`: Set the original language to `<XY>` (e.g. `AP -o=JA`).
 
 ### Create Patches (CP)
-This script is used to create `.xdelta` and `.patJ` patches for all edited game files.  
+This script is used to create `.xdelta`, `.patJ` and `.patE` patches for all edited game files.  
   
 It searches internally specified folders using the naming scheme `<folder>_<language>` (e.g. `Layout_EN`) for edited files and creates patches using the files with matching names from the folder `<folder>_<originalLanguage>` (e.g. `Layout_JA`).  
-A `<file>.<ext>` file will create a `<file>.<ext>.xdelta` patch and a `<file>.savJ` project file will create a `<file>.patJ` patch.  
+A `<file>.<ext>` file will create a `<file>.<ext>.xdelta` patch, a `<file>.savJ` project file will create a `<file>.patJ` patch and a `<file>.savE` project file will create a `<file>.patE` patch.  
 Only patches with a different hash will be overriden by default. The default original language is `JA`.  
 
 _Options:_
@@ -51,8 +51,8 @@ The script requires you to specify the following values to properly send the fil
   * `Title ID`: The ID of the game you want to patch.
   * `3DS IP`: The local IP address of your 3DS. FTPD displays it on the top screen (e.g. **[192.168.1.1]**:5000).
   * `Port`: The port the FTP Server is listening. FTPD displays it on the top screen (e.g. [192.168.1.1]:**5000**).
-  * `User`: The registered username. In FTPD you can configure this in the settings by opening the Menu (Y) and selecting Settings.
-  * `Password`: The registered password. This value can be configured the same way as the username can.
+  * `User`: The registered username. In FTPD you can configure this in the settings by opening the Menu (Y) and selecting Settings. (This can be left blank to connect unauthorized.)
+  * `Password`: The registered password. This value can be configured the same way as the username can. (This can be left blank to connect unauthorized.)
 
 The script only overrides files when they are newer than the files on the 3DS by default. Make sure your computer and the 3DS are set to the same time and date.  
   
