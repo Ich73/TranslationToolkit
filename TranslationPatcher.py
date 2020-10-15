@@ -34,6 +34,7 @@ SEP = b'\xe3\x1b'
 XDELTA_FOLDERS = {
 	'Banner':      ['.bcwav', '.cmbd', '.cgfx'],
 	'Battle':      ['.bcres'],
+	'Code':        ['.bin'],
 	'Debug':       ['.bin'],
 	'Effect':      ['.bcres'],
 	'Event':       ['.gz'],
@@ -61,6 +62,7 @@ PAT_FOLDERS = {
 PARENT_FOLDERS = {
 	'Banner':      'ExtractedBanner',
 	'Battle':      join('ExtractedRomFS', 'data', 'Battle'),
+	'Code':        'ExtractedExeFS',
 	'Debug':       join('ExtractedRomFS', 'data', 'Debug'),
 	'Effect':      join('ExtractedRomFS', 'data', 'Effect'),
 	'Event':       join('ExtractedRomFS', 'data', 'Event'),
