@@ -12,7 +12,7 @@ You can now run `TranslationToolkit.exe` by double clicking it.
 
 ## Scripts
 ### Apply Patches (AP)
-This scripts is used to apply `.xdelta`, `.patJ` and `.patE` patches to all files from the original game.  
+This script is used to apply `.xdelta`, `.patJ` and `.patE` patches to all files from the original game.  
   
 It searches internally specified folders using the naming scheme `<folder>_<language>` (e.g. `Layout_EN`) for patches and applies them to the files with matching names from the folder `<folder>_<originalLanguage>` (e.g. `Layout_JA`).  
 A `<file>.<ext>.xdelta` patch will create `<file>.<ext>`, a `<file>.patJ` patch will create `<file>.binJ` and update `<file>.savJ` if found and a `<file>.patE` patch will create `<file>.e` and update `<file>.savE` if found.  
@@ -65,11 +65,16 @@ This script searches the given destination folder for files with the same name a
 
 ## Hidden Scripts
 ### Update Decoding Tables (UD)
-This scripts is used to update the decoding table stored in `.savJ` and `.savE` save files.  
+This script is used to update the decoding table stored in `.savJ` and `.savE` save files.  
   
 The script requires you to specify the following values:
   * `Save Folder`: The folder containing the save files you want to update. You can enter `.` to update all files in the directory where Translation Toolkit is.
   * `Table File`: The filename of the updated decoding table. This table will be stored inside the save files.
+
+### Update Workspace (UW)
+This script is used to download the latest patches from the repository and run the AP script.
+  
+You can customize the download URL by changing the `UW.url` value in the `tt-config.json` file.
 
 
 ## For Developers
