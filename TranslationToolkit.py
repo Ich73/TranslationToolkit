@@ -13,6 +13,7 @@ from TranslationPatcher import applyPatches, createPatches, distribute
 from SendViaFTP import sendRomFiles
 from FileReplacer import replaceFiles
 from SaveChanger import updateTableInSave
+from WorkspaceManager import downloadAndExtractPatches
 
 CONFIG_FILE = 'tt-config.json'
 
@@ -275,6 +276,17 @@ def UD():
 	updateTableInSave(save_dir=source_dir, table_file=table_file)
 	showEnd()
 
+def UW(original_language, force_override):
+	system('clear')
+	if not verifyStart(): return
+	print('~~ Download Patches ~~')
+	if downloadAndExtractPatches():
+		print()
+		print()
+		print('~~ Apply Patches ~~')
+		applyPatches(original_language=original_language, force_override=force_override)
+	showEnd()
+
 
 ##########
 ## Menu ##
@@ -361,6 +373,7 @@ def menu():
 	elif script == 'S': S(force_override)
 	elif script == 'RF': RF()
 	elif script == 'UD': UD()
+	elif script == 'UW': UW(original_language, force_override)
 	elif script in ['EXIT', 'CLOSE', 'QUIT', ':Q']: return
 	else: menu()
 

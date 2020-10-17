@@ -7,6 +7,7 @@
 !/FileReplacer.py
 !/SaveChanger.py
 !/SendViaFTP.py
+!/WorkspaceManager.py
 !/TranslationPatcher.py
 !/TranslationToolkit.py
 !/TranslationToolkit.spec
