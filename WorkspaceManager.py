@@ -14,15 +14,13 @@ from shutil import move, rmtree
 # 0: nothing, 1: normal, 2: all
 VERBOSE = 1
 
-DOWNLOAD_URL = 'https://github.com/Ich73/DQM2-FanTranslation/archive/master.zip'
-
-def downloadAndExtractPatches():
+def downloadAndExtractPatches(download_url):
 	try:
 		# create temporary folder
 		tempdir = mkdtemp()
 		
 		# download patches
-		with urlopen(DOWNLOAD_URL) as url: data = url.read()
+		with urlopen(download_url) as url: data = url.read()
 		
 		# extract patches to temporary folder and move them
 		ctr = 0

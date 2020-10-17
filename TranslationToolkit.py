@@ -50,7 +50,11 @@ class Config:
 	
 	def get(key, default = None):
 		Config.loadConfig()
-		return Config.cfg.get(key, default)
+		value = Config.cfg.get(key)
+		if value is None:
+			Config.set(key, default)
+			return default
+		return value
 	
 	def set(key, value):
 		Config.cfg[key] = value
@@ -280,7 +284,8 @@ def UW(original_language, force_override):
 	system('clear')
 	if not verifyStart(): return
 	print('~~ Download Patches ~~')
-	if downloadAndExtractPatches():
+	download_url = Config.get('UW.url', r'https://github.com/Ich73/DQM2-FanTranslation/archive/master.zip')
+	if downloadAndExtractPatches(download_url):
 		print()
 		print()
 		print('~~ Apply Patches ~~')
