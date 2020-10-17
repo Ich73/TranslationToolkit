@@ -63,6 +63,15 @@ _Options:_
 This script searches the given destination folder for files with the same name as the files in the given source folder and replaces them. This can be used to update multiple `.bclim` files at once when editing `.arc` files.
 
 
+## Hidden Scripts
+### Update Decoding Tables (UD)
+This scripts is used to update the decoding table stored in `.savJ` and `.savE` save files.  
+  
+The script requires you to specify the following values:
+  * `Save Folder`: The folder containing the save files you want to update. You can enter `.` to update all files in the directory where Translation Toolkit is.
+  * `Table File`: The filename of the updated decoding table. This table will be stored inside the save files.
+
+
 ## For Developers
 ### Setup
 This program is written using [Python 3.8](https://www.python.org/downloads/release/python-383/). Addionally you need `JTools.py` found in [BinJ Editor](https://github.com/Ich73/BinJEditor).
