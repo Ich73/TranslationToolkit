@@ -5,6 +5,7 @@
 !/LICENSE
 !/README.md
 !/FileReplacer.py
+!/SaveChanger.py
 !/SendViaFTP.py
 !/TranslationPatcher.py
 !/TranslationToolkit.py

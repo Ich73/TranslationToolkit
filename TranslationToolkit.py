@@ -4,7 +4,7 @@
 """
 
 from os import system, listdir
-from os.path import join, exists
+from os.path import join, exists, isfile
 import json
 import webbrowser
 from urllib.request import urlopen
@@ -12,6 +12,7 @@ from urllib.request import urlopen
 from TranslationPatcher import applyPatches, createPatches, distribute
 from SendViaFTP import sendRomFiles
 from FileReplacer import replaceFiles
+from SaveChanger import updateTableInSave
 
 CONFIG_FILE = 'tt-config.json'
 
@@ -249,6 +250,31 @@ def RF():
 	replaceFiles(source_files=source_files, destination_dir=destination_dir)
 	showEnd()
 
+def UD():
+	system('clear')
+	
+	source_dir = askParamter(
+		name = 'save folder',
+		description = ['The folder containing the save files to update.'],
+		key = 'UD.source'
+	)
+	
+	while True:
+		table_file = askParamter(
+			name = 'table file',
+			description = ['The updated decoding table file.'],
+			key = 'UD.table'
+		)
+		if isfile(table_file): break
+	
+	print('Save Folder:', source_dir)
+	print('Table File:', table_file)
+	print()
+	
+	if not verifyStart(): return
+	updateTableInSave(save_dir=source_dir, table_file=table_file)
+	showEnd()
+
 
 ##########
 ## Menu ##
@@ -334,6 +360,7 @@ def menu():
 	elif script == 'D': D(original_language, force_override)
 	elif script == 'S': S(force_override)
 	elif script == 'RF': RF()
+	elif script == 'UD': UD()
 	elif script in ['EXIT', 'CLOSE', 'QUIT', ':Q']: return
 	else: menu()
 
