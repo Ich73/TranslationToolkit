@@ -17,7 +17,7 @@ from WorkspaceManager import downloadAndExtractPatches, copyOriginalFiles
 
 CONFIG_FILE = 'tt-config.json'
 
-VERSION = 'v1.1.0'
+VERSION = 'v2.0.0'
 REPOSITORY = r'Ich73/TranslationToolkit'
 
 
