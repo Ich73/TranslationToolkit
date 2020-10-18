@@ -79,8 +79,8 @@ The script requires you to specify the following values:
   * `CIA Folder`: The folder containing the extracted CIA file.
 
 _Options:_
-  * `-f`: Force overriding all files even if their hashes match (e.g. `UW -f`).
-  * `-o=<XY>`: Set the original language to `<XY>` (e.g. `UW -o=JA`).
+  * `-f`: Force overriding all files even if their hashes match (e.g. `SW -f`).
+  * `-o=<XY>`: Set the original language to `<XY>` (e.g. `SW -o=JA`).
 
 ### Update Workspace (UW)
 This script is used to download the latest patches from the repository and run the AP script.
