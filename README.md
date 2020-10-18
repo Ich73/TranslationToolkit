@@ -71,10 +71,22 @@ The script requires you to specify the following values:
   * `Save Folder`: The folder containing the save files you want to update. You can enter `.` to update all files in the directory where Translation Toolkit is.
   * `Table File`: The filename of the updated decoding table. This table will be stored inside the save files.
 
+### Setup Workspace (SW)
+This script is used to download the latest patches from the repository, copy the required original files from the extracted CIA and run the AP script.
+  
+The script requires you to specify the following values:
+  * `Download URL`: The url for downloading all patches as a zip file.
+  * `CIA Folder`: The folder containing the extracted CIA file.
+
+_Options:_
+  * `-f`: Force overriding all files even if their hashes match (e.g. `UW -f`).
+  * `-o=<XY>`: Set the original language to `<XY>` (e.g. `UW -o=JA`).
+
 ### Update Workspace (UW)
 This script is used to download the latest patches from the repository and run the AP script.
   
-You can customize the download URL by changing the `UW.url` value in the `tt-config.json` file.
+The script requires you to specify the following values:
+  * `Download URL`: The url for downloading all patches as a zip file.
 
 _Options:_
   * `-f`: Force overriding all files even if their hashes match (e.g. `UW -f`).
