@@ -57,7 +57,7 @@ The script requires you to specify the following values to properly send the fil
 The script only overrides files when they are newer than the files on the 3DS by default. Make sure your computer and the 3DS are set to the same time and date.  
   
 _Options:_
-  * `-f`: Force overriding all files even if their hashes match (e.g. `D -f`).
+  * `-f`: Force overriding all files even if their hashes match (e.g. `S -f`).
 
 ### Replace Files (RF)
 This script searches the given destination folder for files with the same name as the files in the given source folder and replaces them. This can be used to update multiple `.bclim` files at once when editing `.arc` files.
@@ -75,6 +75,10 @@ The script requires you to specify the following values:
 This script is used to download the latest patches from the repository and run the AP script.
   
 You can customize the download URL by changing the `UW.url` value in the `tt-config.json` file.
+
+_Options:_
+  * `-f`: Force overriding all files even if their hashes match (e.g. `UW -f`).
+  * `-o=<XY>`: Set the original language to `<XY>` (e.g. `UW -o=JA`).
 
 
 ## For Developers
