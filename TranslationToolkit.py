@@ -13,7 +13,7 @@ from TranslationPatcher import applyPatches, createPatches, distribute
 from SendViaFTP import sendRomFiles
 from FileReplacer import replaceFiles
 from SaveChanger import updateTableInSave
-from WorkspaceManager import downloadAndExtractPatches
+from WorkspaceManager import downloadAndExtractPatches, copyOriginalFiles
 
 CONFIG_FILE = 'tt-config.json'
 
@@ -280,16 +280,70 @@ def UD():
 	updateTableInSave(save_dir=source_dir, table_file=table_file)
 	showEnd()
 
+def SW(original_language, force_override):
+	system('clear')
+	
+	download_url = askParamter(
+		name = 'download URL',
+		description = ['The url for downloading all patches as a zip file.'],
+		key = 'UW.url'
+	)
+	
+	cia_dir = askParamter(
+		name = 'CIA folder',
+		description = ['The full path to the folder containing the extracted CIA file.'],
+		key = 'SW.cia'
+	)
+	
+	print('CIA Folder:', cia_dir)
+	print('Download URL:', download_url)
+	print()
+	
+	if not verifyStart(): return
+	
+	print('~~ Download Patches ~~')
+	if not downloadAndExtractPatches(download_url):
+		showEnd()
+		return
+	
+	print()
+	print()
+	print('~~ Copy Original Files ~~')
+	if not copyOriginalFiles(cia_dir, original_language=original_language):
+		showEnd()
+		return
+	
+	print()
+	print()
+	print('~~ Apply Patches ~~')
+	applyPatches(original_language=original_language, force_override=force_override)
+	
+	showEnd()
+
 def UW(original_language, force_override):
 	system('clear')
+	
+	download_url = askParamter(
+		name = 'download URL',
+		description = ['The url for downloading all patches as a zip file.'],
+		key = 'UW.url'
+	)
+	
+	print('Download URL:', download_url)
+	print()
+	
 	if not verifyStart(): return
+	
 	print('~~ Download Patches ~~')
-	download_url = Config.get('UW.url', r'https://github.com/Ich73/DQM2-FanTranslation/archive/master.zip')
-	if downloadAndExtractPatches(download_url):
-		print()
-		print()
-		print('~~ Apply Patches ~~')
-		applyPatches(original_language=original_language, force_override=force_override)
+	if not downloadAndExtractPatches(download_url):
+		showEnd()
+		return
+	
+	print()
+	print()
+	print('~~ Apply Patches ~~')
+	applyPatches(original_language=original_language, force_override=force_override)
+	
 	showEnd()
 
 
@@ -378,6 +432,7 @@ def menu():
 	elif script == 'S': S(force_override)
 	elif script == 'RF': RF()
 	elif script == 'UD': UD()
+	elif script == 'SW': SW(original_language, force_override)
 	elif script == 'UW': UW(original_language, force_override)
 	elif script in ['EXIT', 'CLOSE', 'QUIT', ':Q']: return
 	else: menu()

@@ -32,7 +32,7 @@ SEP = b'\xe3\x1b'
 
 # folders to search for files and patches
 XDELTA_FOLDERS = {
-	'Banner':      ['.bcwav', '.cmbd', '.cgfx'],
+	'Banner':      ['.bcwav', '.cbmd', '.cgfx'],
 	'Battle':      ['.bcres'],
 	'Code':        ['.bin'],
 	'Debug':       ['.bin'],
