@@ -41,11 +41,11 @@ def updateTableInSave(save_dir, table_file):
 		
 		# save output file
 		special_filename = join(tempdir(), 'special.tabJ')
-		with open(special_filename, 'w', encoding = 'UTF-8') as file: file.write(specialj)
+		with open(special_filename, 'w', encoding = 'UTF-8', newline = '\n') as file: file.write(specialj)
 		decode_filename = join(tempdir(), 'decode.tabJ')
-		with open(decode_filename, 'w', encoding = 'ASCII') as file: file.write(decodej)
+		with open(decode_filename, 'w', encoding = 'ASCII', newline = '\n') as file: file.write(decodej)
 		encode_filename = join(tempdir(), 'encode.tabJ')
-		with open(encode_filename, 'w', encoding = 'ASCII') as file: file.write(encodej)
+		with open(encode_filename, 'w', encoding = 'ASCII', newline = '\n') as file: file.write(encodej)
 		save_filenames = [join(tempdir(), file) for file in save_files]
 		for i, save_filename in enumerate(save_filenames):
 			with open(save_filename, 'wb') as file: file.write(save_data[i])
