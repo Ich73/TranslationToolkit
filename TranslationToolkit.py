@@ -10,7 +10,7 @@ import webbrowser
 from urllib.request import urlopen
 
 from TranslationPatcher import applyPatches, createPatches, distribute
-from SendViaFTP import sendRomFiles
+from SendViaFTP import sendFiles
 from FileReplacer import replaceFiles
 from SaveChanger import updateTableInSave
 from WorkspaceManager import downloadAndExtractPatches, copyOriginalFiles
@@ -41,8 +41,11 @@ class Config:
 		if not exists(CONFIG_FILE):
 			Config.cfg = dict()
 			return
-		with open(CONFIG_FILE, 'r') as file:
-			Config.cfg = json.load(file)
+		try:
+			with open(CONFIG_FILE, 'r') as file:
+				Config.cfg = json.load(file)
+		except:
+			Config.cfg = dict()
 	
 	def saveConfig():
 		with open(CONFIG_FILE, 'w') as file:
@@ -128,13 +131,13 @@ def showEnd():
 	input('Press Enter to return to menu...')
 	menu()
 
-def askParamter(name, key, default = '', description = None, hide_fallback = False):
+def askParamter(name, key, default = '', description = None, hide_fallback = False, fallback = None):
 	print('~', ' '.join(w.capitalize() if w[0].islower() else w for w in name.split()), '~')
-	fallback = Config.get(key, default)
+	if key is not None: fallback = Config.get(key, default)
 	for line in description: print(line)
 	print('Enter %s [%s]:' % (name, fallback if not hide_fallback else '***'))
 	command = input('>> ').strip() or fallback
-	Config.set(key, command)
+	if key is not None: Config.set(key, command)
 	print()
 	return command
 
@@ -164,6 +167,16 @@ def D(original_language, force_override):
 	)
 	languages = tuple(languages.split(','))
 	
+	version = askParamter(
+		name = 'version',
+		description = [
+			'The version of the game you want to play.',
+			'You can enter an updated version (e.g. \'v1.1\') or the original version (e.g. \'v1.0\').'
+		],
+		key = 'D.ver',
+		default = 'v1.0'
+	)
+	
 	destination_dir = askParamter(
 		name = 'destination folder',
 		description = ['This folder will contain all edited files with the correct file structure.'],
@@ -172,11 +185,12 @@ def D(original_language, force_override):
 	)
 	
 	print('Language:', ', '.join(languages))
+	print('Version:', version)
 	print('Destination Folder:', destination_dir)
 	print()
 	
 	if not verifyStart(): return
-	distribute(languages=languages, original_language=original_language, destination_dir=destination_dir, force_override=force_override)
+	distribute(languages=languages, version=version, original_language=original_language, destination_dir=destination_dir, force_override=force_override)
 	showEnd()
 
 def S(force_override):
@@ -228,7 +242,7 @@ def S(force_override):
 	print()
 	
 	if not verifyStart(): return
-	sendRomFiles(source_dir=source_dir, title_id=title_id, ip=ip, port=port, user=user, passwd=passwd, force_override=force_override)
+	sendFiles(source_dir=source_dir, title_id=title_id, ip=ip, port=port, user=user, passwd=passwd, force_override=force_override)
 	showEnd()
 
 def RF():
@@ -295,8 +309,35 @@ def SW(original_language, force_override):
 		key = 'SW.cia'
 	)
 	
+	updates = list()
+	fallbacks = Config.get('SW.updates', list())
+	while True:
+		print('Do you wish to add an update? [y/n]')
+		fallback = 'y' if len(fallbacks) > len(updates) else 'n'
+		print('Enter your choice [%s]:' % fallback)
+		command = input('>> ')
+		print()
+		if not command: command = fallback
+		if command != 'y': break
+		update_ver = askParamter(
+			name = 'update version',
+			description = ['The update version you want to add (e.g. \'v1.1\').'],
+			key = None,
+			fallback = fallbacks[len(updates)][0] if len(fallbacks) > len(updates) else ''
+		)
+		update_cia_dir = askParamter(
+			name = 'update CIA folder',
+			description = ['The full path to the folder containing the extracted update CIA file.'],
+			key = None,
+			fallback = fallbacks[len(updates)][1] if len(fallbacks) > len(updates) else ''
+		)
+		updates.append((update_ver, update_cia_dir))
+	Config.set('SW.updates', updates)
+	
 	print('CIA Folder:', cia_dir)
 	print('Download URL:', download_url)
+	for ver, dir in updates:
+		print('Update %s Folder:' % ver, dir)
 	print()
 	
 	if not verifyStart(): return
@@ -309,9 +350,17 @@ def SW(original_language, force_override):
 	print()
 	print()
 	print('~~ Copy Original Files ~~')
-	if not copyOriginalFiles(cia_dir, original_language=original_language):
+	if not copyOriginalFiles(cia_dir, version=None, original_language=original_language):
 		showEnd()
 		return
+	
+	for ver, dir in updates:
+		print()
+		print()
+		print('~~ Copy Update %s Files ~~' % ver)
+		if not copyOriginalFiles(dir, version=ver, original_language=original_language):
+			showEnd()
+			return
 	
 	print()
 	print()

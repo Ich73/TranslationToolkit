@@ -15,9 +15,10 @@
 """
 
 from os import listdir, walk, sep, remove, rename, makedirs
-from os.path import join, exists, splitext, dirname, basename, normpath
+from os.path import join, exists, isdir, splitext, dirname, basename, normpath
 from shutil import copyfile
 from hashlib import md5
+import re
 from zipfile import ZipFile
 from gzip import GzipFile
 from BinJEditor.JTools import parseBinJ, createBinJ, parseE, createE, parseDatJ, createDatJ, parseDatE, parseTabE, parseSpt
@@ -102,19 +103,39 @@ def hashZip(zipfile):
 def extpath(path):
 	return normpath(path).split(sep)[1:]
 
+def splitFolder(folder):
+		a = folder.split('_')
+		parts = {'folder': a[0]}
+		if len(a) > 1:
+			if re.match('^v\d(\.\d+)*$', a[1]): parts['version'] = a[1]
+			else: parts['lang'] = a[1]
+		if len(a) > 2: parts['lang'] = a[2]
+		return parts
+
+def joinFolder(folder, language, version = None):
+	name = folder
+	if version: name += '_' + version
+	if language: name += '_' + language
+	return name
+
 def loopFiles(folders, original_language = None):
 	""" Loops over the files in the folders with the given names that
 		match the given file types.
+		It returns tuples of the folder and edit filename.
+		If original_language is given, it addionally returns the
+		corresponding original folder.
 	"""
-	# iterate over all defined folders
-	for folder, types in folders.items():
-		
-		if original_language:
-			orig_folder = '%s_%s' % (folder, original_language)
-			if not exists(orig_folder): continue
+	if original_language:
+		directories = [splitFolder(dir) for dir in listdir('.') if isdir(dir)]
+		# iterate over all defined folders
+		for folder, types in folders.items():
+			versions = {dir.get('version') for dir in directories if dir['folder'] == folder and dir.get('lang') == original_language}
+			if not versions: continue
 			
 			# iterate over all languages found
-			for edit_folder in [dir for dir in listdir('.') if dir.split('_')[0] == folder and dir != orig_folder]:
+			for version, language in [(dir.get('version'), dir.get('lang')) for dir in directories if dir['folder'] == folder and dir.get('version') in versions and dir.get('lang') != original_language]:
+				edit_folder = joinFolder(folder, language, version)
+				orig_folder = joinFolder(folder, original_language, version)
 				if VERBOSE >= 1: print(edit_folder, end=' ', flush=True)
 				
 				# iterate over all files with a valid file extension
@@ -122,10 +143,11 @@ def loopFiles(folders, original_language = None):
 				if VERBOSE >= 1: print('[%s]' % len(files))
 				for edit_file in files:
 					yield (folder, edit_file, orig_folder)
-		
-		else:
+	
+	else:
+		for folder, types in folders.items():
 			# iterate over all languages found
-			for edit_folder in [dir for dir in listdir('.') if dir.split('_')[0] == folder]:
+			for edit_folder in [dir for dir in listdir('.') if isdir(dir) and splitFolder(dir)['folder'] == folder]:
 				if VERBOSE >= 1: print(edit_folder, end=' ', flush=True)
 				
 				# iterate over all files with a valid file extension
@@ -209,9 +231,9 @@ def applyPatPatches(original_language, force_override):
 		origj = createDatJ(orig_data)
 		editj = createDatJ(edit_data)
 		orig_filename = join(tempdir(), 'orig.datJ')
-		with open(orig_filename, 'w', encoding = 'ANSI') as file: file.write(origj)
+		with open(orig_filename, 'w', encoding = 'ANSI', newline = '\n') as file: file.write(origj)
 		edit_filename = join(tempdir(), 'edit.datJ')
-		with open(edit_filename, 'w', encoding = 'ANSI') as file: file.write(editj)
+		with open(edit_filename, 'w', encoding = 'ANSI', newline = '\n') as file: file.write(editj)
 		sep_filename = join(tempdir(), 'SEP.bin')
 		with open(sep_filename, 'wb') as file: file.write(sep_from_save)
 		special_filename = join(tempdir(), 'special.tabJ')
@@ -377,7 +399,7 @@ def createPatPatches(force_override):
 		# correct newlines
 		data = createDatJ(parseDatJ(data))
 		# save patch file
-		with open(patch_file, 'w', encoding = 'ANSI') as file:
+		with open(patch_file, 'w', encoding = 'ANSI', newline = '\n') as file:
 			file.write(data)
 	
 	ctr = dict()
@@ -475,23 +497,23 @@ def createXDeltaPatches(original_language, force_override):
 ## Distribute ##
 ################
 
-def distribute(languages, original_language = 'JA', destination_dir = '_dist', force_override = False):
+def distribute(languages, version = None, original_language = 'JA', destination_dir = '_dist', force_override = False):
 	if not isinstance(languages, tuple): languages = (languages,)
-	ctr  = distributeBinJAndEFiles(languages, original_language, destination_dir, force_override)
-	ctr2 = distributeOtherFiles(languages, original_language, destination_dir, force_override)
+	if version == 'v1.0': version = None
+	ctr  = distributeBinJAndEFiles(languages, version, original_language, destination_dir, force_override)
+	ctr2 = distributeOtherFiles(languages, version, original_language, destination_dir, force_override)
 	for k, v in ctr2.items(): ctr[k] = ctr.get(k, 0) + v
 	print()
 	if VERBOSE >= 1 and ctr.get('add', 0) > 0 or VERBOSE >= 2: print('Added %d files.' % ctr.get('add', 0))
 	if VERBOSE >= 1: print('Updated %d files.' % ctr.get('update', 0))
 	if VERBOSE >= 2: print('Kept %d files.' % ctr.get('keep',   0))
 
-def distributeBinJAndEFiles(languages, original_language, destination_dir, force_override):
+def distributeBinJAndEFiles(languages, version, original_language, destination_dir, force_override):
 	""" Creates .binJ files from different .savJ / .patJ / .binJ files (line by line)
 		  and copies them to the destination.
 		Creates .e    files from different .savE / .patE / .e    files (line by line)
 		  and copies them to the destination.
 	"""
-	# Info: Does not support folders without a language extension
 	
 	def getData(filename):
 		ext = splitext(filename)[1]
@@ -554,19 +576,17 @@ def distributeBinJAndEFiles(languages, original_language, destination_dir, force
 		with open(filename, 'wb') as file:
 			with GzipFile(fileobj=file, mode='w', filename='', mtime=0) as gzipFile: gzipFile.write(bin)
 	
-	# iterate over all patj folders
-	ctr = dict()
-	for folder, (mode, ext_orig, ext_save, ext_patch) in PAT_FOLDERS.items():
+	def collectFiles(folder, ext_orig, ext_save, ext_patch, ver = None):
 		# collect all files ordered by priority language and priority type
 		files = dict() # dict of shortname (no first folder, no ext) -> list of files
-		for lang in languages:
+		for lang in languages + (None,):
 			for type in [ext_save, ext_patch, ext_orig]:
-				for file in [join(dp, f) for dp, dn, fn in walk('%s_%s' % (folder, lang)) for f in [n for n in fn if splitext(n)[1] == type]]:
+				for file in [join(dp, f) for dp, dn, fn in walk(joinFolder(folder, lang, ver)) for f in [n for n in fn if splitext(n)[1] == type]]:
 					shortname = join(*extpath(splitext(file)[0]))
 					files[shortname] = files.get(shortname, list()) + [(lang, type)]
 		
 		# add original files
-		for file in [join(dp, f) for dp, dn, fn in walk('%s_%s' % (folder, original_language)) for f in [n for n in fn if splitext(n)[1] == ext_orig]]:
+		for file in [join(dp, f) for dp, dn, fn in walk(joinFolder(folder, original_language, ver)) for f in [n for n in fn if splitext(n)[1] == ext_orig]]:
 			shortname = join(*extpath(splitext(file)[0]))
 			files[shortname] = files.get(shortname, list()) + [(original_language, ext_orig)]
 		
@@ -579,7 +599,11 @@ def distributeBinJAndEFiles(languages, original_language, destination_dir, force
 				else: f.append((lang, [type]))
 			
 			# last file must contain original data (savJ or binJ)
-			while ext_save not in f[-1][1] and ext_orig not in f[-1][1]: del f[-1]
+			while ext_save not in f[-1][1] and ext_orig not in f[-1][1]:
+				if not f: # no original file found, skip
+					files[shortname] = None # filter None values later
+					continue
+				del f[-1]
 			if ext_patch in f[-1][1]: f[-1][1].remove(ext_patch)
 			if ext_save in f[-1][1] and ext_orig in f[-1][1]: f[-1][1].remove(ext_orig)
 			
@@ -596,104 +620,120 @@ def distributeBinJAndEFiles(languages, original_language, destination_dir, force
 				continue
 			
 			# update file_list
-			files[shortname] = [join('%s_%s' % (folder, lang), shortname + type[0]) for lang, type in f]
+			files[shortname] = [join(joinFolder(folder, lang, ver), shortname + type[0]) for lang, type in f]
 		
 		# filter None values
 		files = {k: v for k, v in files.items() if v}
-		if VERBOSE >= 2 or VERBOSE >= 1 and len(files) > 0: print(folder, '[%d]' % len(files))
-		
-		# create output files
-		dest_folder = join(destination_dir, PARENT_FOLDERS[folder])
-		for shortname, file_list in files.items():
-			msg_prefix = ' * %s%s:' % (shortname, ext_orig)
-			dest_file = join(dest_folder, shortname + ext_orig)
+		return files
+	
+	# iterate over all patj folders
+	ctr = dict()
+	for folder, (mode, ext_orig, ext_save, ext_patch) in PAT_FOLDERS.items():
+		for ver in [None, version] if version else [None]: # iterate over versions
+			# collect files
+			files = collectFiles(folder, ext_orig, ext_save, ext_patch, ver)
+			if version is not None and ver is None: # update is given but this is v1.0
+				# remove files that are in the original update
+				update_files = [join(*extpath(splitext(join(dp, f))[0])) for dp, dn, fn in walk(joinFolder(folder, original_language, version)) for f in [n for n in fn if splitext(n)[1] == ext_orig]]
+				files = {shortname: file_list for shortname, file_list in files.items() if shortname not in update_files}
+			if VERBOSE >= 2 or VERBOSE >= 1 and len(files) > 0: print(joinFolder(folder, ver), '[%d]' % len(files))
 			
-			# collect data
-			data = None
-			for file in file_list:
-				update_data = getData(file)
-				if data: data = [e if e else update_data[i] for i, e in enumerate(data)]
-				else: data = update_data
-			orig_data, extra = getOrigData(file_list[-1])
-			if orig_data is None: continue
-			data = [e if e else orig_data[i] for i, e in enumerate(data)]
-			
-			# create temporary output file
-			temp_dest_file = dest_file + '.temp'
-			makedirs(dirname(dest_file), exist_ok=True)
-			if mode == 'binJ': saveBinJ(temp_dest_file, data, extra)
-			elif mode == 'e': saveE(temp_dest_file, data, extra)
-			
-			# check if file already exists
-			if exists(dest_file):
-				# compare files
-				if not force_override and hash(dest_file) == hash(temp_dest_file):
-					# equal -> keep old
-					if VERBOSE >= 2: print(msg_prefix, 'keep')
-					ctr['keep'] = ctr.get('keep', 0) + 1
-					remove(temp_dest_file)
-				else:
-					# new -> update file
-					if VERBOSE >= 1: print(msg_prefix, 'update')
-					ctr['update'] = ctr.get('update', 0) + 1
-					remove(dest_file)
-					rename(temp_dest_file, dest_file)
-			else:
-				# add new file
-				if VERBOSE >= 1: print(msg_prefix, 'add')
-				ctr['add'] = ctr.get('add', 0) + 1
+			# create output files
+			dest_folder = join(destination_dir, PARENT_FOLDERS[folder])
+			for shortname, file_list in files.items():
+				msg_prefix = ' * %s%s:' % (shortname, ext_orig)
+				dest_file = join(dest_folder, shortname + ext_orig)
+				
+				# collect data
+				data = None
+				for file in file_list:
+					update_data = getData(file)
+					if data: data = [e if e else update_data[i] for i, e in enumerate(data)]
+					else: data = update_data
+				orig_data, extra = getOrigData(file_list[-1])
+				if orig_data is None: continue
+				data = [e if e else orig_data[i] for i, e in enumerate(data)]
+				
+				# create temporary output file
+				temp_dest_file = dest_file + '.temp'
 				makedirs(dirname(dest_file), exist_ok=True)
-				rename(temp_dest_file, dest_file)
+				if mode == 'binJ': saveBinJ(temp_dest_file, data, extra)
+				elif mode == 'e': saveE(temp_dest_file, data, extra)
+				
+				# check if file already exists
+				if exists(dest_file):
+					# compare files
+					if not force_override and hash(dest_file) == hash(temp_dest_file):
+						# equal -> keep old
+						if VERBOSE >= 2: print(msg_prefix, 'keep')
+						ctr['keep'] = ctr.get('keep', 0) + 1
+						remove(temp_dest_file)
+					else:
+						# new -> update file
+						if VERBOSE >= 1: print(msg_prefix, 'update')
+						ctr['update'] = ctr.get('update', 0) + 1
+						remove(dest_file)
+						rename(temp_dest_file, dest_file)
+				else:
+					# add new file
+					if VERBOSE >= 1: print(msg_prefix, 'add')
+					ctr['add'] = ctr.get('add', 0) + 1
+					makedirs(dirname(dest_file), exist_ok=True)
+					rename(temp_dest_file, dest_file)
 	return ctr
 
-def distributeOtherFiles(languages, original_language, destination_dir, force_override):
-	""" Copys all *.* files to the given destination. """
+def distributeOtherFiles(languages, version, original_language, destination_dir, force_override):
+	""" Copies all *.* files to the given destination. """
 	
-	# iterate over all xdelta folders
-	ctr = dict()
-	for folder, types in XDELTA_FOLDERS.items():
+	def collectFiles(folder, types, ver = None):
 		# collect all files ordered by priority language
 		files = list() # list of (filename, simplename)
-		for lang in languages:
-			for file in [join(dp, f) for dp, dn, fn in walk('%s_%s' % (folder, lang)) for f in [n for n in fn if splitext(n)[1] in types]]:
+		for lang in languages + (None,): # fallback from folders without language
+			for file in [join(dp, f) for dp, dn, fn in walk(joinFolder(folder, lang, ver)) for f in [n for n in fn if splitext(n)[1] in types]]:
 				simplename = extpath(file)
 				if any(s == simplename for _, s in files): continue
 				files.append((file, simplename))
 		
-		# add files from folder without language extension
-		for file in [join(dp, f) for dp, dn, fn in walk(folder) for f in [n for n in fn if splitext(n)[1] in types]]:
-			simplename = extpath(file)
-			if any(s == simplename for _, s in files): continue
-			files.append((file, simplename))
-		
 		# remove files that are the same as the original files
-		orig_folder = '%s_%s' % (folder, original_language)
+		orig_folder = joinFolder(folder, original_language)
 		files = [(f, s) for f, s in files if not exists(join(orig_folder, *s)) or hash(join(orig_folder, *s)) != hash(f)]
-		if VERBOSE >= 2 or VERBOSE >= 1 and len(files) > 0: print(folder, '[%d]' % len(files))
-		
-		# copy collected files
-		dest_folder = join(destination_dir, PARENT_FOLDERS[folder])
-		for source_file, simplename in files:
-			msg_prefix = ' * %s:' % source_file
-			dest_file = join(dest_folder, *simplename)
+		return files
+	
+	# iterate over all xdelta folders
+	ctr = dict()
+	for folder, types in XDELTA_FOLDERS.items():
+		for ver in [None, version] if version else [None]: # iterate over versions
+			# collect files
+			files = collectFiles(folder, types, ver)
+			if version is not None and ver is None: # update is given but this is v1.0
+				# remove files that are in the original update
+				update_files = [extpath(join(dp, f)) for dp, dn, fn in walk(joinFolder(folder, original_language, version)) for f in [n for n in fn if splitext(n)[1] in types]]
+				files = [(file, simplename) for file, simplename in files if simplename not in update_files]
+			if VERBOSE >= 2 or VERBOSE >= 1 and len(files) > 0: print(joinFolder(folder, ver), '[%d]' % len(files))
 			
-			# check if file already exists
-			if exists(dest_file):
-				# compare files
-				if not force_override and hash(dest_file) == hash(source_file):
-					# equal -> keep old file
-					if VERBOSE >= 2: print(msg_prefix, 'keep')
-					ctr['keep'] = ctr.get('keep', 0) + 1
+			# copy collected files
+			dest_folder = join(destination_dir, PARENT_FOLDERS[folder])
+			for source_file, simplename in files:
+				msg_prefix = ' * %s:' % source_file
+				dest_file = join(dest_folder, *simplename)
+				
+				# check if file already exists
+				if exists(dest_file):
+					# compare files
+					if not force_override and hash(dest_file) == hash(source_file):
+						# equal -> keep old file
+						if VERBOSE >= 2: print(msg_prefix, 'keep')
+						ctr['keep'] = ctr.get('keep', 0) + 1
+					else:
+						# new -> update file
+						if VERBOSE >= 1: print(msg_prefix, 'update')
+						ctr['update'] = ctr.get('update', 0) + 1
+						remove(dest_file)
+						copyfile(source_file, dest_file)
 				else:
-					# new -> update file
-					if VERBOSE >= 1: print(msg_prefix, 'update')
-					ctr['update'] = ctr.get('update', 0) + 1
-					remove(dest_file)
+					# add new file
+					if VERBOSE >= 1: print(msg_prefix, 'add')
+					ctr['add'] = ctr.get('add', 0) + 1
+					makedirs(dirname(dest_file), exist_ok=True)
 					copyfile(source_file, dest_file)
-			else:
-				# add new file
-				if VERBOSE >= 1: print(msg_prefix, 'add')
-				ctr['add'] = ctr.get('add', 0) + 1
-				makedirs(dirname(dest_file), exist_ok=True)
-				copyfile(source_file, dest_file)
 	return ctr

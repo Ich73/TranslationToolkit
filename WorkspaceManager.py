@@ -11,7 +11,7 @@ from urllib.request import urlopen
 from tempfile import mkdtemp
 from shutil import move, rmtree, copyfile
 
-from TranslationPatcher import hash, XDELTA_FOLDERS, PAT_FOLDERS, PARENT_FOLDERS
+from TranslationPatcher import hash, joinFolder, XDELTA_FOLDERS, PAT_FOLDERS, PARENT_FOLDERS
 
 # 0: nothing, 1: normal, 2: all
 VERBOSE = 1
@@ -61,7 +61,7 @@ def downloadAndExtractPatches(download_url):
 		print('Error:', str(e))
 		return False
 
-def copyOriginalFiles(cia_dir, original_language = 'JA'):
+def copyOriginalFiles(cia_dir, version = None, original_language = 'JA'):
 	try:
 		# collect patched folders
 		folders = XDELTA_FOLDERS.copy() # merge xdelta and pat folders
@@ -70,25 +70,27 @@ def copyOriginalFiles(cia_dir, original_language = 'JA'):
 					if exists(folder) or any(x.split('_')[0] == folder for x in listdir('.'))}
 		
 		# copy files
-		ctr = 0
+		ctr = dict()
 		for folder, types in sorted(folders.items()):
 			cia_folder = join(cia_dir, PARENT_FOLDERS[folder])
-			workspace_folder = '%s_%s' % (folder, original_language)
+			workspace_folder = joinFolder(folder, original_language, version)
 			if VERBOSE >= 1: print(workspace_folder)
 			for original_file in [join(dp, f) for dp, dn, fn in walk(cia_folder) for f in fn if splitext(f)[1] in types]:
 				common_prefix = commonprefix((original_file, cia_folder))
 				simplename = relpath(original_file, common_prefix)
 				workspace_file = join(workspace_folder, simplename)
 				if VERBOSE >= 2: print(' *', simplename)
+				ctr['find'] = ctr.get('find', 0) + 1
 				if exists(workspace_file) and hash(original_file) == hash(workspace_file): continue
 				directory = dirname(workspace_file)
 				if directory and not exists(directory): makedirs(directory)
 				copyfile(original_file, workspace_file)
-				ctr += 1
+				ctr['copy'] = ctr.get('copy', 0) + 1
 		
 		if VERBOSE >= 1:
 			print()
-			print('Copied %d files.' % ctr)
+			print('Found %d files.' % ctr.get('find', 0))
+			print('Copied %d files.' % ctr.get('copy', 0))
 		
 		return True
 		
