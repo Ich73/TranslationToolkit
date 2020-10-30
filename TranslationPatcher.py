@@ -25,8 +25,8 @@ from BinJEditor.JTools import parseBinJ, createBinJ, parseE, createE, parseDatJ,
 from tempfile import gettempdir as tempdir
 from subprocess import run
 
-# 0: nothing, 1: minimal, 2: all
-VERBOSE = 1
+# 0: nothing, 1: minimal, 2: default, 3: all
+VERBOSE = 2
 
 # default DQM separator token
 SEP = b'\xe3\x1b'
@@ -166,9 +166,9 @@ def applyPatches(original_language = 'JA', force_override = False):
 	ctr2 = applyXDeltaPatches(original_language, force_override)
 	for k, v in ctr2.items(): ctr[k] = ctr.get(k, 0) + v
 	print()
-	if VERBOSE >= 1 and ctr.get('create', 0) > 0 or VERBOSE >= 2: print('Created %d files.' % ctr.get('create', 0))
+	if VERBOSE >= 1 and ctr.get('create', 0) > 0 or VERBOSE >= 3: print('Created %d files.' % ctr.get('create', 0))
 	if VERBOSE >= 1: print('Updated %d files.' % ctr.get('update', 0))
-	if VERBOSE >= 2: print('Kept %d files.' % ctr.get('keep',   0))
+	if VERBOSE >= 3: print('Kept %d files.' % ctr.get('keep',   0))
 
 def applyPatPatches(original_language, force_override):
 	""" Creates .binJ files from .patJ patches and the original .binJ file.
@@ -273,7 +273,7 @@ def applyPatPatches(original_language, force_override):
 		# find corresponding original file
 		orig_file = join(orig_folder, *simplename[:-1], splitext(simplename[-1])[0] + ext_orig)
 		if not exists(orig_file):
-			if VERBOSE >= 1: print(' !', 'Warning: Original File Not Found:', join(*extpath(orig_file)))
+			if VERBOSE >= 2: print(' !', 'Warning: Original File Not Found:', join(*extpath(orig_file)))
 			continue
 		
 		# define output file
@@ -287,18 +287,18 @@ def applyPatPatches(original_language, force_override):
 			# compare output files
 			if not force_override and hash(output_file) == hash(temp_output_file):
 				# equal -> keep old output file
-				if VERBOSE >= 2: print(msg_prefix, 'keep')
+				if VERBOSE >= 3: print(msg_prefix, 'keep')
 				ctr['keep'] = ctr.get('keep', 0) + 1
 				remove(temp_output_file)
 			else:
 				# new -> update output file
-				if VERBOSE >= 1: print(msg_prefix, 'update')
+				if VERBOSE >= 2: print(msg_prefix, 'update')
 				ctr['update'] = ctr.get('update', 0) + 1
 				remove(output_file)
 				rename(temp_output_file, output_file)
 		else:
 			# create new output file
-			if VERBOSE >= 1: print(msg_prefix, 'create')
+			if VERBOSE >= 2: print(msg_prefix, 'create')
 			ctr['create'] = ctr.get('create', 0) + 1
 			applyPatToFile(orig_file, patch_file, output_file, mode)
 		
@@ -314,12 +314,12 @@ def applyPatPatches(original_language, force_override):
 			# compare save files
 			if not force_override and hashZip(output_save_file) == hashZip(temp_output_save_file):
 				# equal -> keep old save file
-				if VERBOSE >= 2: print(msg_prefix, 'keep')
+				if VERBOSE >= 3: print(msg_prefix, 'keep')
 				ctr['keep'] = ctr.get('keep', 0) + 1
 				remove(temp_output_save_file)
 			else:
 				# new -> update save file
-				if VERBOSE >= 1: print(msg_prefix, 'update')
+				if VERBOSE >= 2: print(msg_prefix, 'update')
 				ctr['update'] = ctr.get('update', 0) + 1
 				remove(output_save_file)
 				rename(temp_output_save_file, output_save_file)
@@ -355,18 +355,18 @@ def applyXDeltaPatches(original_language, force_override):
 			# compare output files
 			if not force_override and hash(output_file) == hash(temp_output_file):
 				# equal -> keep old output file
-				if VERBOSE >= 2: print(msg_prefix, 'keep')
+				if VERBOSE >= 3: print(msg_prefix, 'keep')
 				ctr['keep'] = ctr.get('keep', 0) + 1
 				remove(temp_output_file)
 			else:
 				# new -> update output file
-				if VERBOSE >= 1: print(msg_prefix, 'update')
+				if VERBOSE >= 2: print(msg_prefix, 'update')
 				ctr['update'] = ctr.get('update', 0) + 1
 				remove(output_file)
 				rename(temp_output_file, output_file)
 		else:
 			# create new output file
-			if VERBOSE >= 1: print(msg_prefix, 'create')
+			if VERBOSE >= 2: print(msg_prefix, 'create')
 			ctr['create'] = ctr.get('create', 0) + 1
 			applyXDelta(orig_file, patch_file, output_file)
 	return ctr
@@ -381,11 +381,11 @@ def createPatches(original_language = 'JA', force_override = False):
 	ctr2 = createXDeltaPatches(original_language, force_override)
 	for k, v in ctr2.items(): ctr[k] = ctr.get(k, 0) + v
 	print()
-	if VERBOSE >= 1 and ctr.get('create', 0) > 0 or VERBOSE >= 2: print('Created %d patches.' % ctr.get('create', 0))
+	if VERBOSE >= 1 and ctr.get('create', 0) > 0 or VERBOSE >= 3: print('Created %d patches.' % ctr.get('create', 0))
 	if VERBOSE >= 1: print('Updated %d patches.' % ctr.get('update', 0))
-	if VERBOSE >= 1 and ctr.get('delete', 0) > 0 or VERBOSE >= 2: print('Deleted %d patches.' % ctr.get('delete', 0))
-	if VERBOSE >= 2: print('Kept %d patches.' % ctr.get('keep',   0))
-	if VERBOSE >= 2: print('Skipped %d files.' % ctr.get('skip',   0))
+	if VERBOSE >= 1 and ctr.get('delete', 0) > 0 or VERBOSE >= 3: print('Deleted %d patches.' % ctr.get('delete', 0))
+	if VERBOSE >= 3: print('Kept %d patches.' % ctr.get('keep',   0))
+	if VERBOSE >= 3: print('Skipped %d files.' % ctr.get('skip',   0))
 
 def createPatPatches(force_override):
 	""" Creates .patJ patches from .savJ files.
@@ -420,18 +420,18 @@ def createPatPatches(force_override):
 			# compare patches
 			if not force_override and hash(patch_file) == hash(temp_patch_file):
 				# equal -> keep old patch
-				if VERBOSE >= 2: print(msg_prefix, 'keep')
+				if VERBOSE >= 3: print(msg_prefix, 'keep')
 				ctr['keep'] = ctr.get('keep', 0) + 1
 				remove(temp_patch_file)
 			else:
 				# new -> update patch
-				if VERBOSE >= 1: print(msg_prefix, 'update')
+				if VERBOSE >= 2: print(msg_prefix, 'update')
 				ctr['update'] = ctr.get('update', 0) + 1
 				remove(patch_file)
 				rename(temp_patch_file, patch_file)
 		else:
 			# create new patch
-			if VERBOSE >= 1: print(msg_prefix, 'create')
+			if VERBOSE >= 2: print(msg_prefix, 'create')
 			ctr['create'] = ctr.get('create', 0) + 1
 			createPat(edit_file, patch_file)
 	return ctr
@@ -450,7 +450,7 @@ def createXDeltaPatches(original_language, force_override):
 		# find corresponding original file
 		orig_file = join(orig_folder, *simplename)
 		if not exists(orig_file):
-			if VERBOSE >= 1: print(' !', 'Warning: Original File Not Found:', join(*simplename))
+			if VERBOSE >= 2: print(' !', 'Warning: Original File Not Found:', join(*simplename))
 			continue
 		
 		# define patch file
@@ -460,11 +460,11 @@ def createXDeltaPatches(original_language, force_override):
 		if hash(orig_file) == hash(edit_file):
 			# check if patch exists
 			if exists(patch_file):
-				if VERBOSE >= 1: print(msg_prefix, 'delete patch')
+				if VERBOSE >= 2: print(msg_prefix, 'delete patch')
 				ctr['delete'] = ctr.get('delete', 0) + 1
 				remove(patch_file)
 			else:
-				if VERBOSE >= 2: print(msg_prefix, 'skip')
+				if VERBOSE >= 3: print(msg_prefix, 'skip')
 				ctr['skip'] = ctr.get('skip', 0) + 1
 			continue
 		
@@ -476,18 +476,18 @@ def createXDeltaPatches(original_language, force_override):
 			# compare patches
 			if not force_override and hash(patch_file) == hash(temp_patch_file):
 				# equal -> keep old patch
-				if VERBOSE >= 2: print(msg_prefix, 'keep')
+				if VERBOSE >= 3: print(msg_prefix, 'keep')
 				ctr['keep'] = ctr.get('keep', 0) + 1
 				remove(temp_patch_file)
 			else:
 				# new -> update patch
-				if VERBOSE >= 1: print(msg_prefix, 'update')
+				if VERBOSE >= 2: print(msg_prefix, 'update')
 				ctr['update'] = ctr.get('update', 0) + 1
 				remove(patch_file)
 				rename(temp_patch_file, patch_file)
 		else:
 			# create new patch
-			if VERBOSE >= 1: print(msg_prefix, 'create')
+			if VERBOSE >= 2: print(msg_prefix, 'create')
 			ctr['create'] = ctr.get('create', 0) + 1
 			createXDelta(orig_file, edit_file, patch_file)
 	return ctr
@@ -497,18 +497,26 @@ def createXDeltaPatches(original_language, force_override):
 ## Distribute ##
 ################
 
-def distribute(languages, version = None, original_language = 'JA', destination_dir = '_dist', force_override = False):
+def distribute(languages, version = None, version_only = False, original_language = 'JA', destination_dir = '_dist', force_override = False, verbose = None):
+	""" Copies all patches for the given [languages] to the [destination_dir].
+		version = None -> (LayeredFS v1.0, CIA v1.0) Copies all v1.0 files
+		version = vX.Y, version_only = False -> (LayeredFS vX.Y) Copies all v1.0 files (excluding updated files) and copies all vX.Y files
+		version = vX.Y, version_only = True -> (CIA vX.Y) Copies all xV.Y files
+	"""
+	if verbose is None: verbose = VERBOSE
 	if not isinstance(languages, tuple): languages = (languages,)
-	if version == 'v1.0': version = None
-	ctr  = distributeBinJAndEFiles(languages, version, original_language, destination_dir, force_override)
-	ctr2 = distributeOtherFiles(languages, version, original_language, destination_dir, force_override)
+	if version is None or version == 'v1.0': versions = [None]
+	elif version is not None and not version_only: versions = [None, version]
+	elif version is not None and version_only: versions = [version]
+	ctr  = distributeBinJAndEFiles(languages, versions, original_language, destination_dir, force_override, verbose)
+	ctr2 = distributeOtherFiles(languages, versions, original_language, destination_dir, force_override, verbose)
 	for k, v in ctr2.items(): ctr[k] = ctr.get(k, 0) + v
 	print()
-	if VERBOSE >= 1 and ctr.get('add', 0) > 0 or VERBOSE >= 2: print('Added %d files.' % ctr.get('add', 0))
+	if VERBOSE >= 1 and ctr.get('add', 0) > 0 or VERBOSE >= 3: print('Added %d files.' % ctr.get('add', 0))
 	if VERBOSE >= 1: print('Updated %d files.' % ctr.get('update', 0))
-	if VERBOSE >= 2: print('Kept %d files.' % ctr.get('keep',   0))
+	if VERBOSE >= 3: print('Kept %d files.' % ctr.get('keep',   0))
 
-def distributeBinJAndEFiles(languages, version, original_language, destination_dir, force_override):
+def distributeBinJAndEFiles(languages, versions, original_language, destination_dir, force_override, VERBOSE):
 	""" Creates .binJ files from different .savJ / .patJ / .binJ files (line by line)
 		  and copies them to the destination.
 		Creates .e    files from different .savE / .patE / .e    files (line by line)
@@ -629,14 +637,13 @@ def distributeBinJAndEFiles(languages, version, original_language, destination_d
 	# iterate over all patj folders
 	ctr = dict()
 	for folder, (mode, ext_orig, ext_save, ext_patch) in PAT_FOLDERS.items():
-		for ver in [None, version] if version else [None]: # iterate over versions
+		for ver in versions: # iterate over versions
 			# collect files
 			files = collectFiles(folder, ext_orig, ext_save, ext_patch, ver)
-			if version is not None and ver is None: # update is given but this is v1.0
-				# remove files that are in the original update
-				update_files = [join(*extpath(splitext(join(dp, f))[0])) for dp, dn, fn in walk(joinFolder(folder, original_language, version)) for f in [n for n in fn if splitext(n)[1] == ext_orig]]
+			if len(versions) > 1 and ver is None: # remove files that are in the original update
+				update_files = [join(*extpath(splitext(join(dp, f))[0])) for dp, dn, fn in walk(joinFolder(folder, original_language, versions[1])) for f in [n for n in fn if splitext(n)[1] == ext_orig]]
 				files = {shortname: file_list for shortname, file_list in files.items() if shortname not in update_files}
-			if VERBOSE >= 2 or VERBOSE >= 1 and len(files) > 0: print(joinFolder(folder, ver), '[%d]' % len(files))
+			if VERBOSE >= 3 or VERBOSE >= 1 and len(files) > 0: print(joinFolder(folder, ver), '[%d]' % len(files))
 			
 			# create output files
 			dest_folder = join(destination_dir, PARENT_FOLDERS[folder])
@@ -665,24 +672,24 @@ def distributeBinJAndEFiles(languages, version, original_language, destination_d
 					# compare files
 					if not force_override and hash(dest_file) == hash(temp_dest_file):
 						# equal -> keep old
-						if VERBOSE >= 2: print(msg_prefix, 'keep')
+						if VERBOSE >= 3: print(msg_prefix, 'keep')
 						ctr['keep'] = ctr.get('keep', 0) + 1
 						remove(temp_dest_file)
 					else:
 						# new -> update file
-						if VERBOSE >= 1: print(msg_prefix, 'update')
+						if VERBOSE >= 2: print(msg_prefix, 'update')
 						ctr['update'] = ctr.get('update', 0) + 1
 						remove(dest_file)
 						rename(temp_dest_file, dest_file)
 				else:
 					# add new file
-					if VERBOSE >= 1: print(msg_prefix, 'add')
+					if VERBOSE >= 2: print(msg_prefix, 'add')
 					ctr['add'] = ctr.get('add', 0) + 1
 					makedirs(dirname(dest_file), exist_ok=True)
 					rename(temp_dest_file, dest_file)
 	return ctr
 
-def distributeOtherFiles(languages, version, original_language, destination_dir, force_override):
+def distributeOtherFiles(languages, versions, original_language, destination_dir, force_override, VERBOSE):
 	""" Copies all *.* files to the given destination. """
 	
 	def collectFiles(folder, types, ver = None):
@@ -702,14 +709,13 @@ def distributeOtherFiles(languages, version, original_language, destination_dir,
 	# iterate over all xdelta folders
 	ctr = dict()
 	for folder, types in XDELTA_FOLDERS.items():
-		for ver in [None, version] if version else [None]: # iterate over versions
+		for ver in versions: # iterate over versions
 			# collect files
 			files = collectFiles(folder, types, ver)
-			if version is not None and ver is None: # update is given but this is v1.0
-				# remove files that are in the original update
-				update_files = [extpath(join(dp, f)) for dp, dn, fn in walk(joinFolder(folder, original_language, version)) for f in [n for n in fn if splitext(n)[1] in types]]
+			if len(versions) > 1 and ver is None: # remove files that are in the original update
+				update_files = [extpath(join(dp, f)) for dp, dn, fn in walk(joinFolder(folder, original_language, versions[1])) for f in [n for n in fn if splitext(n)[1] in types]]
 				files = [(file, simplename) for file, simplename in files if simplename not in update_files]
-			if VERBOSE >= 2 or VERBOSE >= 1 and len(files) > 0: print(joinFolder(folder, ver), '[%d]' % len(files))
+			if VERBOSE >= 3 or VERBOSE >= 1 and len(files) > 0: print(joinFolder(folder, ver), '[%d]' % len(files))
 			
 			# copy collected files
 			dest_folder = join(destination_dir, PARENT_FOLDERS[folder])
@@ -722,17 +728,17 @@ def distributeOtherFiles(languages, version, original_language, destination_dir,
 					# compare files
 					if not force_override and hash(dest_file) == hash(source_file):
 						# equal -> keep old file
-						if VERBOSE >= 2: print(msg_prefix, 'keep')
+						if VERBOSE >= 3: print(msg_prefix, 'keep')
 						ctr['keep'] = ctr.get('keep', 0) + 1
 					else:
 						# new -> update file
-						if VERBOSE >= 1: print(msg_prefix, 'update')
+						if VERBOSE >= 2: print(msg_prefix, 'update')
 						ctr['update'] = ctr.get('update', 0) + 1
 						remove(dest_file)
 						copyfile(source_file, dest_file)
 				else:
 					# add new file
-					if VERBOSE >= 1: print(msg_prefix, 'add')
+					if VERBOSE >= 2: print(msg_prefix, 'add')
 					ctr['add'] = ctr.get('add', 0) + 1
 					makedirs(dirname(dest_file), exist_ok=True)
 					copyfile(source_file, dest_file)
