@@ -5,6 +5,8 @@
 
 from os import system, listdir
 from os.path import join, exists, isfile
+from shutil import rmtree
+from tempfile import mkdtemp
 import json
 import webbrowser
 from urllib.request import urlopen
@@ -13,7 +15,7 @@ from TranslationPatcher import applyPatches, createPatches, distribute
 from SendViaFTP import sendFiles
 from FileReplacer import replaceFiles
 from SaveChanger import updateTableInSave
-from WorkspaceManager import downloadAndExtractPatches, copyOriginalFiles
+from WorkspaceManager import downloadAndExtractPatches, copyOriginalFiles, copyPatchedFiles, prepareReleasePatches, createReleasePatches
 
 CONFIG_FILE = 'tt-config.json'
 
@@ -142,19 +144,19 @@ def askParamter(name, key, default = '', description = None, hide_fallback = Fal
 	return command
 
 def AP(original_language, force_override):
-	system('clear')
+	system('cls')
 	if not verifyStart(): return
 	applyPatches(original_language=original_language, force_override=force_override)
 	showEnd()
 
 def CP(original_language, force_override):
-	system('clear')
+	system('cls')
 	if not verifyStart(): return
 	createPatches(original_language=original_language, force_override=force_override)
 	showEnd()
 
 def D(original_language, force_override):
-	system('clear')
+	system('cls')
 	
 	languages = askParamter(
 		name = 'language',
@@ -190,11 +192,11 @@ def D(original_language, force_override):
 	print()
 	
 	if not verifyStart(): return
-	distribute(languages=languages, version=version, original_language=original_language, destination_dir=destination_dir, force_override=force_override)
+	distribute(languages=languages, version=version, version_only=False, original_language=original_language, destination_dir=destination_dir, force_override=force_override)
 	showEnd()
 
 def S(force_override):
-	system('clear')
+	system('cls')
 	
 	source_dir = askParamter(
 		name = 'folder',
@@ -246,7 +248,7 @@ def S(force_override):
 	showEnd()
 
 def RF():
-	system('clear')
+	system('cls')
 	
 	source_dir = askParamter(
 		name = 'source folder',
@@ -270,12 +272,13 @@ def RF():
 	showEnd()
 
 def UD():
-	system('clear')
+	system('cls')
 	
 	source_dir = askParamter(
 		name = 'save folder',
 		description = ['The folder containing the save files to update.'],
-		key = 'UD.source'
+		key = 'UD.source',
+		default = '.'
 	)
 	
 	while True:
@@ -295,7 +298,7 @@ def UD():
 	showEnd()
 
 def SW(original_language, force_override):
-	system('clear')
+	system('cls')
 	
 	download_url = askParamter(
 		name = 'download URL',
@@ -370,7 +373,7 @@ def SW(original_language, force_override):
 	showEnd()
 
 def UW(original_language, force_override):
-	system('clear')
+	system('cls')
 	
 	download_url = askParamter(
 		name = 'download URL',
@@ -395,6 +398,81 @@ def UW(original_language, force_override):
 	
 	showEnd()
 
+def RP(original_language):
+	system('cls')
+	
+	languages = askParamter(
+		name = 'language',
+		description = [
+			'You can enter a single language (e.g. \'EN\') or multiple languages (e.g. \'DE,EN\').',
+			'Translations of additionally languages are used when translations of the first language are missing.'
+		],
+		key = 'RP.lang',
+		default = 'EN'
+	)
+	languages = tuple(languages.split(','))
+	
+	version = askParamter(
+		name = 'version',
+		description = ['You can enter an updated version (e.g. \'v1.1\') or the original version (e.g. \'v1.0\').'],
+		key = 'RP.ver',
+		default = 'v1.0'
+	)
+	
+	lang_ver = '%s::%s' % ('-'.join(languages), version)
+	cia_dirs = Config.get('RP.cias', dict())
+	cia_dir = askParamter(
+		name = 'CIA folder',
+		description = ['The full path to the folder containing the extracted CIA file',
+						'you want to update and create patches for.'],
+		key = None,
+		fallback = cia_dirs.get(lang_ver, '')
+	)
+	cia_dirs[lang_ver] = cia_dir
+	Config.set('RP.cias', cia_dirs)
+	
+	patches_filenames = Config.get('RP.patchfiles', dict())
+	patches_filename = askParamter(
+		name = 'patches file',
+		description = ['The filename for the archive containing the patches.'],
+		key = None,
+		fallback = patches_filenames.get(lang_ver, join('_release', 'Patches-%s-%s.zip' % (version, '-'.join(languages))))
+	)
+	patches_filenames[lang_ver] = patches_filename
+	Config.set('RP.patchfiles', patches_filenames)
+	
+	print('Language:', ', '.join(languages))
+	print('Version:', version)
+	print('CIA Folder:', cia_dir)
+	print('Patches File:', patches_filename)
+	print()
+	
+	if not verifyStart(): return
+	
+	print('~~ Prepare Release Patches ~~')
+	prepareReleasePatches(cia_dir, original_language=original_language)
+	
+	print()
+	print()
+	print('~~ Distribute Patches ~~')
+	temp_dir = mkdtemp()
+	distribute(languages=languages, version=version, version_only=True, original_language=original_language, destination_dir=temp_dir, force_override=True, verbose=1)
+	
+	print()
+	print()
+	print('~~ Copy Patched Files ~~')
+	if not copyPatchedFiles(temp_dir, cia_dir):
+		showEnd()
+		return
+	
+	print()
+	print()
+	print('~~ Create Release Patches ~~')
+	createReleasePatches(cia_dir, patches_filename, original_language=original_language)
+	
+	rmtree(temp_dir)
+	showEnd()
+
 
 ##########
 ## Menu ##
@@ -404,7 +482,7 @@ m = 2 # left margin
 w = 100 # width of title box
 
 def printTitleBox():
-	system('clear')
+	system('cls')
 	def title(msg=''): print(' '*m + '##' + ' '*int((w-len(msg))/2) + msg + ' '*(w-len(msg)-int((w-len(msg))/2)) + '##')
 	print()
 	title('#'*w)
@@ -422,11 +500,11 @@ def printCategory(text):
 def printOption(cmd, text):
 	print(' '*m + '*', cmd, ':', text)
 
-def printInfo(text, width=90):
+def printInfo(text):
 	print(' '*(m+4), end=' ')
 	c = 0
 	for word in text.split():
-		if c + len(word) > width-m-1:
+		if c + len(word) > w-m-6:
 			c = 0
 			print()
 			print(' '*(m+4), end=' ')
@@ -450,8 +528,13 @@ def menu():
 	printOption('S', 'Send via FTP')
 	printInfo('Sends the contents of the in the \'D\' script generated folder to the 3DS so luma can patch them. Only updated files are sent.')
 	printOption('RF', 'Replace Files')
-	printInfo('Searches the given destination folder for files with the same name as the files in the given source folder and replaces them. This can be used to update multiple .bclim files at once when editing .arc files.')
+	#printInfo('Searches the given destination folder for files with the same name as the files in the given source folder and replaces them. This can be used to update multiple .bclim files at once when editing .arc files.')
+	printOption('UD', 'Update Decoding Tables')
+	printOption('SW', 'Setup Workspace')
+	printOption('UW', 'Update Workspace')
+	printOption('RP', 'Release Patches')
 	
+	print()
 	printCategory('Options')
 	printOption('-f', 'Force Override All Files (e.g. \'AP -f\')')
 	printOption('-o=<XY>', 'Override Original Language (e.g. \'AP -o=JA\')')
@@ -483,11 +566,12 @@ def menu():
 	elif script == 'UD': UD()
 	elif script == 'SW': SW(original_language, force_override)
 	elif script == 'UW': UW(original_language, force_override)
+	elif script == 'RP': RP(original_language)
 	elif script in ['EXIT', 'CLOSE', 'QUIT', ':Q']: return
 	else: menu()
 
 def main():
-	system('clear')
+	system('cls')
 	system('mode con: cols=%d lines=%d' % (w+m+4+m, 43)) # SCREEN WIDTH AND HEIGHT
 	checkUpdates()
 	menu()
