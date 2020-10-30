@@ -37,6 +37,8 @@ _Options:_
 This script is used to copy all edited game files to a folder that matches the file structure of an extracted `.cia` or `.3ds` file. You can use this to either copy it to your extracted game to create a patched `.cia` or `.3ds` file, or use the [S](#send-via-ftp-s) script to send the files to your 3DS so [Luma](https://github.com/LumaTeam/Luma3DS) can patch them.  
   
 The script requires you to specify a single language (e.g.`EN`) or multiple languages (e.g. `DE,EN`) to distribute. If you specify multiple languages the translations of the first language are used whenever possible. The other languages are used when translations are missing. This works line-by-line for `.binJ` files (if `.patJ` files are found) and file-by-file for all other file types.  
+Additionally you need to specify a version. If you choose the original version (`v1.0`) only those files are being distributed. If you chose an updated version (e.g. `v1.1`) the files from the original version and the updated files will be distributed.  
+The third value is the directory you want the files to be distributed to.  
   
 The script only overrides files with a different hash by default. The default original language is `JA`.
 
@@ -62,8 +64,6 @@ _Options:_
 ### Replace Files (RF)
 This script searches the given destination folder for files with the same name as the files in the given source folder and replaces them. This can be used to update multiple `.bclim` files at once when editing `.arc` files.
 
-
-## Hidden Scripts
 ### Update Decoding Tables (UD)
 This script is used to update the decoding table stored in `.savJ` and `.savE` save files.  
   
@@ -91,6 +91,18 @@ The script requires you to specify the following values:
 _Options:_
   * `-f`: Force overriding all files even if their hashes match (e.g. `UW -f`).
   * `-o=<XY>`: Set the original language to `<XY>` (e.g. `UW -o=JA`).
+
+### Release Patches (RP)
+This script is used to create `banner.xdelta`, `code.xdelta` and `RomFS.xdelta` patches by distributing the files for a given language and version and rebuilding the banner and romFS files.
+
+The script requires you to specify the following values:
+  * `Language`: A single language (e.g.`EN`) or multiple languages (e.g. `DE,EN`) to distribute. More information can be found in the details of the `D` script.
+  * `Version`: The version to release patches for (e.g. `v1.0`, `v1.1`).
+  * `CIA Folder`: The folder containing the extracted CIA file to override. Do _not_ use the folder you used for the `SW` script, but a copy of it.
+  * `Patches File`: The archive file to write the patches to.
+
+_Options:_
+  * `-o=<XY>`: Set the original language to `<XY>` (e.g. `RP -o=JA`).
 
 
 ## For Developers
