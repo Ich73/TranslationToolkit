@@ -43,8 +43,8 @@ def sendFiles(source_dir, title_id, ip, port, user, passwd, force_override = Fal
 			# summary
 			for k, v in ctr2.items(): ctr[k] = ctr.get(k, 0) + v
 			print()
-			if VERBOSE >= 1: print('Sent %d files.' % ctr['send'])
-			if VERBOSE >= 2: print('Kept %d files.' % ctr['keep'])
+			if VERBOSE >= 1: print('Sent %d files.' % ctr.get('send', 0))
+			if VERBOSE >= 2: print('Kept %d files.' % ctr.get('keep', 0))
 			
 	except Exception as e:
 		print('Error:', str(e))
@@ -65,7 +65,7 @@ def sendExeFiles(ftp, source_dir, title_id, force_override = False):
 		
 		# compare file timestamps
 		if not force_override:
-			mlsd = ftp.mlsd('.')
+			mlsd = list(ftp.mlsd('.'))
 			dest_timestamp = next((strptime(info['modify'], '%Y%m%d%H%M%S') for file, info in mlsd if file == dest_filename), None)
 			if dest_timestamp is not None:
 				src_timestamp = localtime(getmtime(src_filename))
@@ -108,7 +108,7 @@ def sendRomFiles(ftp, source_dir, title_id, force_override = False):
 		
 		# compare file timestamps
 		if not force_override:
-			if dest_path not in MLSD: MLSD[dest_path] = ftp.mlsd('.')
+			if dest_path not in MLSD: MLSD[dest_path] = list(ftp.mlsd('.'))
 			dest_timestamp = next((strptime(info['modify'], '%Y%m%d%H%M%S') for file, info in MLSD[dest_path] if file == dest_filename), None)
 			if dest_timestamp is not None:
 				src_timestamp = localtime(getmtime(src_filename))
