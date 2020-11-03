@@ -6,6 +6,7 @@
 !/README.md
 !/FileReplacer.py
 !/SaveChanger.py
+!/SendToCitra.py
 !/SendViaFTP.py
 !/WorkspaceManager.py
 !/TranslationPatcher.py
