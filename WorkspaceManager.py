@@ -53,7 +53,7 @@ def downloadAndExtractPatches(download_url):
 					remove(extracted_file)
 				else:
 					directory = dirname(simplename)
-					if directory and not exists(directory): makedirs(directory)
+					if directory: makedirs(directory, exist_ok=True)
 					move(extracted_file, simplename)
 					ctr['update'] = ctr.get('update', 0) + 1
 				ctr['download'] = ctr.get('download', 0) + 1
@@ -92,7 +92,7 @@ def copyOriginalFiles(cia_dir, version = None, original_language = 'JA'):
 				ctr['find'] = ctr.get('find', 0) + 1
 				if exists(workspace_file) and hash(original_file) == hash(workspace_file): continue
 				directory = dirname(workspace_file)
-				if directory and not exists(directory): makedirs(directory)
+				if directory: makedirs(directory, exist_ok=True)
 				copyfile(original_file, workspace_file)
 				ctr['copy'] = ctr.get('copy', 0) + 1
 		
@@ -117,7 +117,7 @@ def copyPatchedFiles(output_folder, cia_dir):
 			if VERBOSE >= 2: print(' *', simplename)
 			dest_file = join(cia_dir, simplename)
 			directory = dirname(dest_file)
-			if directory and not exists(directory): makedirs(directory)
+			if directory: makedirs(directory, exist_ok=True)
 			copyfile(src_file, dest_file)
 			ctr += 1
 		
@@ -188,7 +188,7 @@ def createReleasePatches(cia_dir, patches_filename, original_language = 'JA'):
 		
 		# archive patches
 		directory = dirname(patches_filename)
-		if directory and not exists(directory): makedirs(directory)
+		if directory: makedirs(directory, exist_ok=True)
 		with ZipFile(patches_filename, 'w') as zip:
 			for patch in ['banner.xdelta', 'code.xdelta', 'RomFS.xdelta']:
 				if VERBOSE >= 1: print('Add %s to patches' % patch)
