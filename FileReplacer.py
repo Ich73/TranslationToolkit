@@ -4,7 +4,7 @@
 """
 
 from os import listdir, walk
-from os.path import isdir, basename, join
+from os.path import isdir, isfile, basename, join
 from shutil import copyfile
 
 def replaceFiles(source_files, destination_dir):
@@ -26,7 +26,7 @@ if __name__ == '__main__':
 		print('  * py -3 FileReplacer.py <FolderToCopyFrom> <DirectoryToCopyTo>')
 	else:
 		if isdir(sys.argv[1]):
-			source_files = [join(sys.argv[1], f) for f in listdir(sys.argv[1])]
+			source_files = [join(sys.argv[1], f) for f in listdir(sys.argv[1]) if isfile(f)]
 		else: source_files = [sys.argv[1]]
 		destination_dir = sys.argv[2]
 		replaceFiles(source_files, destination_dir)

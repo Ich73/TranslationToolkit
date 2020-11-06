@@ -622,7 +622,7 @@ def main():
 		system('mode con: cols=%d lines=%d' % (w+m+4+m, 41)) # SCREEN WIDTH AND HEIGHT
 		checkUpdates()
 		menu()
-	except:
+	except Exception:
 		import traceback
 		traceback.print_exc()
 		print()
