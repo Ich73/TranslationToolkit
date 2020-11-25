@@ -66,6 +66,7 @@ class Config:
 		Config.cfg[key] = value
 		Config.saveConfig()
 
+
 #############
 ## Updates ##
 #############
