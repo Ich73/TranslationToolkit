@@ -139,11 +139,12 @@ def prepareReleasePatches(cia_dir, original_language = 'JA'):
 		copyfile(join(cia_dir, 'ExtractedExeFS', 'banner.bin'), join(cia_dir, 'banner-%s.bin' % original_language))
 		ctr += 1
 	
-	# save original code if not existent
-	if exists(join(cia_dir, 'ExtractedExeFS', 'code.bin')) and not exists(join(cia_dir, 'code-%s.bin' % original_language)):
-		if VERBOSE >= 1: print('Save original code to code-%s.bin' % original_language)
-		copyfile(join(cia_dir, 'ExtractedExeFS', 'code.bin'), join(cia_dir, 'code-%s.bin' % original_language))
-		ctr += 1
+	# save original code and icon if not existent
+	for item in ['code', 'icon']:
+		if exists(join(cia_dir, 'ExtractedExeFS', '%s.bin' % item)) and not exists(join(cia_dir, '%s-%s.bin' % (item, original_language))):
+			if VERBOSE >= 1: print('Save original %s to %s-%s.bin' % (item, item, original_language))
+			copyfile(join(cia_dir, 'ExtractedExeFS', '%s.bin' % item), join(cia_dir, '%s-%s.bin' % (item, original_language)))
+			ctr += 1
 	
 	if VERBOSE >= 1: print('Saved %d files.' % ctr)
 
@@ -161,20 +162,27 @@ def createReleasePatches(cia_dir, patches_filename, original_language = 'JA'):
 				if VERBOSE >= 1: print('Copy banner to ExtractedExeFS')
 				copyfile(join(cia_dir, 'banner.bin'), join(cia_dir, 'ExtractedExeFS', 'banner.bin'))
 			# create patch
-			if VERBOSE >= 1: print('Creating banner patch...')
-			run('xdelta -f -s banner-%s.bin banner.bin banner.xdelta' % original_language, cwd=cia_dir)
-			if VERBOSE >= 1: print()
+			if hash(join(cia_dir, 'banner.bin')) != hash(join(cia_dir, 'banner-%s.bin' % original_language)):
+				if VERBOSE >= 1: print('Creating banner patch...')
+				run('xdelta -f -s banner-%s.bin banner.bin banner.xdelta' % original_language, cwd=cia_dir)
+				if VERBOSE >= 1: print()
+			else:
+				if VERBOSE >= 2:
+					print('Skip banner patch')
+					print()
 		
-		# create code patch
-		if exists(join(cia_dir, 'ExtractedExeFS', 'code.bin')):
-			# save original code if not existent
-			if not exists(join(cia_dir, 'code-%s.bin' % original_language)):
-				if VERBOSE >= 1: print('Save original code to code-%s.bin' % original_language)
-				copyfile(join(cia_dir, 'ExtractedExeFS', 'code.bin'), join(cia_dir, 'code-%s.bin' % original_language))
-			# create patch
-			if VERBOSE >= 1: print('Creating code patch...')
-			run('xdelta -f -s code-%s.bin ExtractedExeFS\\code.bin code.xdelta' % original_language, cwd=cia_dir)
-			if VERBOSE >= 1: print()
+		# create code and icon patch
+		for item in ['code', 'icon']:
+			if exists(join(cia_dir, 'ExtractedExeFS', '%s.bin' % item)):
+				# create patch
+				if hash(join(cia_dir, 'ExtractedExeFS', '%s.bin' % item)) != hash(join(cia_dir, '%s-%s.bin' % (item, original_language))):
+					if VERBOSE >= 1: print('Creating %s patch...' % item)
+					run('xdelta -f -s %s-%s.bin ExtractedExeFS\\%s.bin %s.xdelta' % (item, original_language, item, item), cwd=cia_dir)
+					if VERBOSE >= 1: print()
+				else:
+					if VERBOSE >= 2:
+						print('Skip %s patch' % item)
+						print()
 		
 		# create romFS patch
 		if exists(join(cia_dir, 'ExtractedRomFS')):
@@ -190,10 +198,10 @@ def createReleasePatches(cia_dir, patches_filename, original_language = 'JA'):
 		directory = dirname(patches_filename)
 		if directory: makedirs(directory, exist_ok=True)
 		with ZipFile(patches_filename, 'w') as zip:
-			for patch in ['banner.xdelta', 'code.xdelta', 'RomFS.xdelta']:
-				if VERBOSE >= 1: print('Add %s to patches' % patch)
+			for patch in ['banner.xdelta', 'code.xdelta', 'icon.xdelta', 'RomFS.xdelta']:
 				file = join(cia_dir, patch)
 				if exists(file):
+					if VERBOSE >= 1: print('Add %s to patches' % patch)
 					zip.write(file, arcname=patch)
 		if VERBOSE >= 1:
 			print()
