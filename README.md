@@ -1,3 +1,6 @@
+[![](https://img.shields.io/github/v/release/Ich73/TranslationToolkit?include_prereleases&label=Release)](https://github.com/Ich73/TranslationToolkit/releases/latest)
+[![](https://img.shields.io/github/downloads/Ich73/TranslationToolkit/total?label=Downloads)](https://github.com/Ich73/TranslationToolkit/releases)
+[![](https://img.shields.io/github/license/Ich73/TranslationToolkit?label=License)](/LICENSE)
 # Translation Toolkit
 Translation Toolkit is a command line interface to simplify the workflow for translating games.  
 It is especially designed for the [DQM2-FanTranslation](https://github.com/Ich73/DQM2-FanTranslation) project.
