@@ -3,7 +3,7 @@
 <<<
 """
 
-from os import makedirs, walk, sep, getenv
+from os import makedirs, walk, sep
 from os.path import join, normpath, basename, exists, dirname
 from shutil import copyfile
 from TranslationPatcher import hash
@@ -11,9 +11,9 @@ from TranslationPatcher import hash
 # 0: nothing, 1: minimal, 2: all
 VERBOSE = 1
 
-def sendFiles(source_dir, title_id, force_override = False):
+def sendFiles(source_dir, title_id, citra_dir, force_override = False):
 	# set citra mod path
-	mod_path = join(getenv('APPDATA'), 'Citra', 'load', 'mods', title_id.upper())
+	mod_path = join(citra_dir, 'load', 'mods', title_id.upper())
 	
 	# for exefs and romfs
 	ctr = dict()

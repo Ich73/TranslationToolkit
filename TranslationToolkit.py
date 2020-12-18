@@ -3,7 +3,7 @@
 <<<
 """
 
-from os import system, listdir
+from os import system, listdir, getenv
 from os.path import join, exists, isfile, isdir
 from shutil import rmtree
 from tempfile import mkdtemp
@@ -274,12 +274,24 @@ def SC(force_override):
 		default = '00040000000cf500'
 	)
 	
+	user_dir = join(getenv('PROGRAMFILES'), 'Citra', 'user')
+	appdata_dir = join(getenv('APPDATA'), 'Citra')
+	while True:
+		citra_dir = askParamter(
+			name = 'Citra folder',
+			description = ['Citra\'s mod folder to which the patched files should be copied.'],
+			key = 'SC.citra',
+			default = appdata_dir if not exists(user_dir) else user_dir
+		)
+		if isdir(citra_dir): break
+	
 	print('Folder:', source_dir)
 	print('Title ID:', title_id)
+	print('Citra Folder:', citra_dir)
 	print()
 	
 	if not verifyStart(): return
-	sendFilesToCitra(source_dir=source_dir, title_id=title_id, force_override=force_override)
+	sendFilesToCitra(source_dir=source_dir, title_id=title_id, citra_dir=citra_dir, force_override=force_override)
 	showEnd()
 
 def RF():
