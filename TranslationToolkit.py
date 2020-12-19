@@ -579,7 +579,7 @@ def menu():
 	printOption('AP', 'Apply Patches')
 	printInfo('Uses xdelta patches to patch files from the original game. Applies .patJ patches to .binJ and .savJ files. Applies .patE patches to .e and .savE files.')
 	printOption('CP', 'Create Patches')
-	printInfo('Creates xdelta patches for all edited game files. Creates .patJ patches from .savJ files. Creates .patE patches from .savE files.')
+	printInfo('Creates xdelta patches for all edited game files. Creates .patJ patches from .savJ or .binJ files. Creates .patE patches from .savE or .e files.')
 	printOption('D', 'Distribute')
 	printInfo('Copies all edited game files to a folder. The folder can be used by the \'S\' and \'SC\' script for a LayeredFS patch. Or you can copy it to your extracted cia to create a translated cia.')
 	printOption('S', 'Send via FTP')

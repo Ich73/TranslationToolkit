@@ -29,7 +29,7 @@ _Options:_
 This script is used to create `.xdelta`, `.patJ` and `.patE` patches for all edited game files.  
   
 It searches internally specified folders using the naming scheme `<folder>_<language>` (e.g. `Layout_EN`) for edited files and creates patches using the files with matching names from the folder `<folder>_<originalLanguage>` (e.g. `Layout_JA`).  
-A `<file>.<ext>` file will create a `<file>.<ext>.xdelta` patch, a `<file>.savJ` project file will create a `<file>.patJ` patch and a `<file>.savE` project file will create a `<file>.patE` patch.  
+A `<file>.<ext>` file will create a `<file>.<ext>.xdelta` patch, a `<file>.savJ` project file will create a `<file>.patJ` patch and a `<file>.savE` project file will create a `<file>.patE` patch. If no `<file>.savJ` or `<file>.savE` project file is found `<file>.binJ` and `<file>.e` files are used to create the patch.  
 Only patches with a different hash will be overriden by default. The default original language is `JA`.  
 
 _Options:_

@@ -203,14 +203,14 @@ def applyPatPatches(original_language, force_override):
 				with GzipFile(orig_file, 'r') as file: bin = file.read()
 				orig_data, extra = parseE(bin, SEP)
 		except:
-			print('Error: Parsing %s file failed.' % mode)
+			print(' !', 'Error: Parsing %s file failed:' % mode, join(*extpath(orig_file)))
 			return
 		# read patch file
 		with open(patch_file, 'r', encoding = 'ANSI') as file: patj = file.read()
 		edit_data = parseDatJ(patj)
 		# check if compatible
 		if len(edit_data) != len(orig_data):
-			print('Warning: Lengths of original file and patch differ.')
+			print(' !', 'Warning: Lengths of original file and patch differ:', join(*extpath(orig_file)))
 			if len(edit_data) > len(orig_data): edit_data = edit_data[:len(orig_data)]
 			else: edit_data = edit_data + [b'']*(len(orig_data) - len(edit_data))
 		# patch data
@@ -240,7 +240,7 @@ def applyPatPatches(original_language, force_override):
 		edit_data = parseDatJ(patj)
 		# check if compatible
 		if len(edit_data) != len(orig_data):
-			print('Warning: Lengths of original file and patch differ.')
+			print(' !', 'Warning: Lengths of original file and patch differ:', join(*extpath(orig_file)))
 			if len(edit_data) > len(orig_data): edit_data = edit_data[:len(orig_data)]
 			else: edit_data = edit_data + [b'']*(len(orig_data) - len(edit_data))
 		# save output file
@@ -289,7 +289,7 @@ def applyPatPatches(original_language, force_override):
 		# find corresponding original file
 		orig_file = join(orig_folder, *simplename[:-1], splitext(simplename[-1])[0] + ext_orig)
 		if not exists(orig_file):
-			if VERBOSE >= 2: print(' !', 'Warning: Original File Not Found:', join(*extpath(orig_file)))
+			if VERBOSE >= 2: print(' !', 'Warning: Original file not found:', join(*extpath(orig_file)))
 			continue
 		
 		# define output file
@@ -357,7 +357,7 @@ def applyXDeltaPatches(original_language, force_override):
 		# find corresponding original file
 		orig_file = join(orig_folder, *simplename)
 		if not exists(orig_file):
-			print(' !', 'Warning: Original File Not Found:', join(*simplename))
+			print(' !', 'Warning: Original file not found:', join(*simplename))
 			continue
 		
 		# define output file
@@ -393,7 +393,7 @@ def applyXDeltaPatches(original_language, force_override):
 ############
 
 def createPatches(original_language = 'JA', force_override = False):
-	ctr  = createPatPatches(force_override)
+	ctr  = createPatPatches(original_language, force_override)
 	ctr2 = createXDeltaPatches(original_language, force_override)
 	for k, v in ctr2.items(): ctr[k] = ctr.get(k, 0) + v
 	print()
@@ -403,12 +403,12 @@ def createPatches(original_language = 'JA', force_override = False):
 	if VERBOSE >= 3: print('Kept %d patches.' % ctr.get('keep',   0))
 	if VERBOSE >= 3: print('Skipped %d files.' % ctr.get('skip',   0))
 
-def createPatPatches(force_override):
-	""" Creates .patJ patches from .savJ files.
-		Creates .patE patches from .savE files.
+def createPatPatches(original_language, force_override):
+	""" Creates .patJ patches from .savJ files or pairs of .binJ files.
+		Creates .patE patches from .savE files or pairs of .e files.
 	"""
 	
-	def createPat(save_file, patch_file):
+	def createPatFromSav(save_file, patch_file):
 		# read edit data from save
 		with ZipFile(save_file, 'r') as zip:
 			data = zip.read('edit.datJ').decode('ANSI')
@@ -418,38 +418,133 @@ def createPatPatches(force_override):
 		with open(patch_file, 'w', encoding = 'ANSI', newline = '\n') as file:
 			file.write(data)
 	
+	def createPatFromOrigAndEdit(orig_file, edit_file, patch_file, mode):
+		def readFile(file):
+			try:
+				if mode == 'binJ':
+					with open(file, 'rb') as file: bin = file.read()
+					return parseBinJ(bin, SEP)
+				elif mode == 'e':
+					with GzipFile(file, 'r') as file: bin = file.read()
+					return parseE(bin, SEP)
+			except:
+				print(' !', 'Error: Parsing %s file failed:' % mode, join(*extpath(file)))
+				return None, None
+		# read original file
+		orig_data, orig_extra = readFile(orig_file)
+		if orig_data is None: return
+		# read edit file
+		edit_data, edit_extra = readFile(edit_file)
+		if edit_data is None: return
+		# check if compatible
+		if len(edit_data) != len(orig_data): # check data length
+			print(' !', 'Warning: Lengths of original and edited file differ:', join(*extpath(orig_file)))
+			if len(edit_data) > len(orig_data): edit_data = edit_data[:len(orig_data)]
+			else: edit_data = edit_data + [b'']*(len(orig_data) - len(edit_data))
+		# check if compatible for binJ
+		if mode == 'binJ':
+			if edit_extra['prefix'] != orig_extra['prefix']:
+				print(' !', 'Warning: Prefixes of original and edited file differ.')
+		# check if compatible for e
+		elif mode == 'e':
+			if edit_extra['prefix'] != orig_extra['prefix']:
+				print(' !', 'Warning: Prefixes of original and edited file differ.')
+			if edit_extra['header'] != orig_extra['header']:
+				print(' !', 'Warning: Headers of original and edited file differ.')
+			if edit_extra['scripts'] != orig_extra['scripts']:
+				print(' !', 'Warning: Scripts of original and edited file differ.')
+			if edit_extra['links'] != orig_extra['links']:
+				print(' !', 'Warning: Links of original and edited file differ.')
+		# create patch
+		patch = createDatJ([edit if edit != orig else b'' for orig, edit in zip(orig_data, edit_data)])
+		# save patch file
+		with open(patch_file, 'w', encoding = 'ASCII', newline = '\n') as file:
+			file.write(patch)
+	
+	def collectFiles(folder, ext_orig, ext_save):
+		# find directories matching the given folder
+		directories = [splitFolder(dir) for dir in listdir('.') if isdir(dir)]
+		versions = {dir.get('version') for dir in directories if dir['folder'] == folder and dir.get('lang') == original_language}
+		if not versions: return
+		
+		# iterate over all languages found
+		for version, language in [(dir.get('version'), dir.get('lang')) for dir in directories if dir['folder'] == folder and dir.get('version') in versions and dir.get('lang') != original_language]:
+			edit_folder = joinFolder(folder, language, version)
+			orig_folder = joinFolder(folder, original_language, version)
+			if VERBOSE >= 1: print(edit_folder, end=' ', flush=True)
+			
+			# collect all files by priority type
+			files = dict() # dict of shortname (no first folder, no ext) -> ext
+			for type in [ext_orig, ext_save]: # reverse priority
+				for file in [join(dp, f) for dp, dn, fn in walk(edit_folder) for f in [n for n in fn if splitext(n)[1] == type]]:
+					shortname = join(*extpath(splitext(file)[0]))
+					files[shortname] = type # override files of worse priority
+			if VERBOSE >= 1: print('[%s]' % len(files))
+			
+			# yield all values of the current folders
+			for shortname, type in files.items():
+				yield (edit_folder, shortname, type, orig_folder)
+	
+	# iterate over all pat folders
 	ctr = dict()
-	folders = {k: v[2] for k, v in PAT_FOLDERS.items()}
-	for folder, edit_file in loopFiles(folders):
-		simplename = extpath(edit_file)
-		mode, ext_orig, ext_save, ext_patch = PAT_FOLDERS[folder]
-		msg_prefix = ' * %s:' % join(*simplename[:-1], splitext(simplename[-1])[0] + ext_patch)
-		
-		# define patch file
-		patch_file = splitext(edit_file)[0] + ext_patch
-		
-		# check if patch already exists
-		if exists(patch_file):
-			# create temporary patch
-			temp_patch_file = patch_file + '.temp'
-			createPat(edit_file, temp_patch_file)
-			# compare patches
-			if not force_override and hash(patch_file) == hash(temp_patch_file):
-				# equal -> keep old patch
-				if VERBOSE >= 3: print(msg_prefix, 'keep')
-				ctr['keep'] = ctr.get('keep', 0) + 1
-				remove(temp_patch_file)
+	for folder, (mode, ext_orig, ext_save, ext_patch) in PAT_FOLDERS.items():
+		# iterate over all files
+		for folder, shortname, type, orig_folder in collectFiles(folder, ext_orig, ext_save):
+			msg_prefix = ' * %s:' % join(shortname + ext_patch)
+			edit_file = join(folder, shortname + type)
+			
+			# define patch file
+			patch_file = join(folder, shortname + ext_patch)
+			
+			if type == ext_orig:
+				# define orig file
+				orig_file = join(orig_folder, shortname + type)
+				if not exists(orig_file):
+					if VERBOSE >= 2: print(' !', 'Warning: Original file not found:', shortname + type)
+					return
+				
+				# compare files
+				if hash(orig_file) == hash(edit_file):
+					# check if patch exists
+					if exists(patch_file):
+						if VERBOSE >= 2: print(msg_prefix, 'delete patch')
+						ctr['delete'] = ctr.get('delete', 0) + 1
+						remove(patch_file)
+					else:
+						if VERBOSE >= 3: print(msg_prefix, 'skip')
+						ctr['skip'] = ctr.get('skip', 0) + 1
+					continue
+			
+			def createPat(patch_file):
+				# savJ/savE -> create from sav
+				if type == ext_save:
+					createPatFromSav(edit_file, patch_file)
+				# binJ/e -> create from edit and orig
+				elif type == ext_orig:
+					createPatFromOrigAndEdit(orig_file, edit_file, patch_file, mode)
+			
+			# check if patch already exists
+			if exists(patch_file):
+				# create temporary patch
+				temp_patch_file = patch_file + '.temp'
+				createPat(temp_patch_file)
+				# compare patches
+				if not force_override and hash(patch_file) == hash(temp_patch_file):
+					# equal -> keep old patch
+					if VERBOSE >= 3: print(msg_prefix, 'keep')
+					ctr['keep'] = ctr.get('keep', 0) + 1
+					remove(temp_patch_file)
+				else:
+					# new -> update patch
+					if VERBOSE >= 2: print(msg_prefix, 'update')
+					ctr['update'] = ctr.get('update', 0) + 1
+					remove(patch_file)
+					rename(temp_patch_file, patch_file)
 			else:
-				# new -> update patch
-				if VERBOSE >= 2: print(msg_prefix, 'update')
-				ctr['update'] = ctr.get('update', 0) + 1
-				remove(patch_file)
-				rename(temp_patch_file, patch_file)
-		else:
-			# create new patch
-			if VERBOSE >= 2: print(msg_prefix, 'create')
-			ctr['create'] = ctr.get('create', 0) + 1
-			createPat(edit_file, patch_file)
+				# create new patch
+				if VERBOSE >= 2: print(msg_prefix, 'create')
+				ctr['create'] = ctr.get('create', 0) + 1
+				createPat(patch_file)
 	return ctr
 
 def createXDeltaPatches(original_language, force_override):
@@ -466,7 +561,7 @@ def createXDeltaPatches(original_language, force_override):
 		# find corresponding original file
 		orig_file = join(orig_folder, *simplename)
 		if not exists(orig_file):
-			if VERBOSE >= 2: print(' !', 'Warning: Original File Not Found:', join(*simplename))
+			if VERBOSE >= 2: print(' !', 'Warning: Original file not found:', join(*simplename))
 			continue
 		
 		# define patch file
@@ -580,7 +675,7 @@ def distributeBinJAndEFiles(languages, versions, original_language, destination_
 				with open(filename, 'rb') as file: bin = file.read()
 				return parseBinJ(bin, SEP)
 			except:
-				print('Error: Parsing .binJ file failed.')
+				print(' !', 'Error: Parsing .binJ file failed.')
 				return None, None
 		# e -> read orig data and extra
 		elif ext == '.e':
@@ -588,7 +683,7 @@ def distributeBinJAndEFiles(languages, versions, original_language, destination_
 				with GzipFile(filename, 'r') as file: bin = file.read()
 				return parseE(bin, SEP)
 			except:
-				print('Error: Parsing .e file failed.')
+				print(' !', 'Error: Parsing .e file failed.')
 				return None, None
 	
 	def saveBinJ(filename, data, extra):
