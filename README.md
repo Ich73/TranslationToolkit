@@ -3,14 +3,14 @@
 [![](https://img.shields.io/github/license/Ich73/TranslationToolkit?label=License)](/LICENSE)
 # Translation Toolkit
 Translation Toolkit is a command line interface to simplify the workflow for translating games.  
-It is especially designed for the [DQM2-FanTranslation](https://github.com/Ich73/DQM2-FanTranslation) project.
+It is especially designed for the [DQM2-FanTranslation](https://github.com/Ich73/DQM2-FanTranslation) project.  
+  
+It uses the following tools:
+  * [xdelta](https://github.com/jmacd/xdelta-gpl) ([v3.1.0](https://github.com/jmacd/xdelta-gpl/releases/tag/v3.1.0))
+  * [3dstool](https://github.com/dnasdw/3dstool) ([v1.1.0](https://github.com/dnasdw/3dstool/releases/tag/v1.1.0))
 
 ## Using Translation Toolkit
-You can download the newest version as an executable from the [Release Page](https://github.com/Ich73/TranslationToolkit/releases/latest). Copy `TranslationToolkit.exe` to the root of your translation directory.  
-
-Addionally you need `xdelta.exe` which is included in [xdelta UI](http://www.romhacking.net/utilities/598/). Copy this file to the same folder.
-  
-You can now run `TranslationToolkit.exe` by double clicking it.
+You can download the newest version as an executable from the [Release Page](https://github.com/Ich73/TranslationToolkit/releases/latest). Copy `TranslationToolkit.exe` to the root of your translation directory and run it.
 
 
 ## Scripts
@@ -121,7 +121,7 @@ _Options:_
 
 ## For Developers
 ### Setup
-This program is written using [Python 3.8](https://www.python.org/downloads/release/python-383/). Addionally you need `JTools.py` found in [BinJ Editor](https://github.com/Ich73/BinJEditor).
+This program is written using [Python 3.8](https://www.python.org/downloads/release/python-383/). Addionally you need [`JTools.py`](https://github.com/Ich73/BinJEditor/blob/master/JTools.py) found in [BinJ Editor](https://github.com/Ich73/BinJEditor).
 
 ### Running
 You can run the program by using the command `python TranslationToolkit.py`.

@@ -17,6 +17,7 @@ from SendToCitra import sendFiles as sendFilesToCitra
 from FileReplacer import replaceFiles
 from SaveChanger import updateTableInSave
 from WorkspaceManager import downloadAndExtractPatches, copyOriginalFiles, copyPatchedFiles, prepareReleasePatches, createReleasePatches
+from WorkspaceManager import checkTool, downloadExe
 
 CONFIG_FILE = 'tt-config.json'
 
@@ -114,6 +115,17 @@ def checkUpdates():
 		elif script == 'C': pass
 		elif script == 'I': Config.set('ignoreVersion', tag)
 	except Exception: pass
+
+def checkTools():
+	# check xdelta
+	version, url = Config.get('xdelta', ('3.1.0', r'https://github.com/jmacd/xdelta-gpl/releases/download/v3.1.0/xdelta3-3.1.0-x86_64.exe.zip'))
+	if not checkTool('xdelta -V', version):
+		downloadExe(url, 'xdelta.exe')
+	
+	# check 3dstool
+	version, url = Config.get('3dstool', ('1.1.0', r'https://github.com/dnasdw/3dstool/releases/download/v1.1.0/3dstool.zip'))
+	if not checkTool('3dstool', version):
+		downloadExe(url, '3dstool.exe')
 
 
 #############
@@ -634,6 +646,7 @@ def main():
 		system('cls')
 		system('mode con: cols=%d lines=%d' % (w+m+4+m, 41)) # SCREEN WIDTH AND HEIGHT
 		checkUpdates()
+		checkTools()
 		menu()
 	except Exception:
 		import traceback

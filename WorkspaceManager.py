@@ -4,26 +4,76 @@
 """
 
 from os import makedirs, listdir, walk, remove, getenv, rename
-from os.path import join, normpath, sep, exists, isdir, dirname, splitext, commonprefix, relpath
-from subprocess import run
+from os.path import join, normpath, sep, exists, isdir, dirname, basename, splitext, commonprefix, relpath
+from subprocess import run, PIPE, STDOUT, DEVNULL
 from zipfile import ZipFile
 from io import BytesIO
 from urllib.request import urlopen
 from tempfile import mkdtemp
 from shutil import move, rmtree, copyfile
+import re
 
 from TranslationPatcher import hash, joinFolder, XDELTA_FOLDERS, PAT_FOLDERS, PARENT_FOLDERS
 
 # 0: nothing, 1: normal, 2: all
 VERBOSE = 1
 
-# Hacking Toolkit
-TOOL_PATH = None
-for base in [getenv('PROGRAMFILES'), getenv('PROGRAMFILES(x86)')]:
-	path = join(base, 'HackingToolkit3DS', '3dstool.exe')
-	if exists(path):
-		TOOL_PATH = path
-		break
+
+###########
+## Tools ##
+###########
+
+def checkTool(command, target_version):
+	""" Uses the given [command] to get the version of a tool
+		and returns true if the version matches the [target_version].
+	"""
+	proc = run(command, stdout=PIPE, stderr=STDOUT, shell=True)
+	output = proc.stdout.decode('UTF-8')
+	match = re.search(r'\d+(\.\d+)+\w*', output)
+	version = match.group() if match else None
+	return version == target_version
+
+def downloadExe(download_url, filename):
+	""" Downloads an exe file form the given [download_url], puts it in the current directory
+		and renames it to [filename].
+		If the download is a zip file it uses the first exe file found in the archive.
+	"""
+	# remove file if existent
+	if exists(filename):
+		print('Updating', filename)
+		remove(filename)
+	
+	# get type and download data
+	print('Downloading', basename(download_url))
+	print(' ', 'from', download_url)
+	type = splitext(download_url)[1]
+	with urlopen(download_url) as url: data = url.read()
+	
+	# zip file
+	if type == '.zip':
+		with ZipFile(BytesIO(data)) as zip:
+			file = next((file for file in zip.infolist() if splitext(file.filename)[1] == '.exe'), None)
+			if not file: raise Exception('The downloaded zip file does not contain an exe file.')
+			print('Extracting', basename(file.filename))
+			zip.extract(file)
+			rename(basename(file.filename), filename)
+	
+	# exe
+	elif type == '.exe':
+		with open(filename, 'wb') as file:
+			file.write(data)
+	
+	# not supported
+	else: raise Exception('The download link does not point towards a zip or exe file.')
+	
+	# success
+	print('Downloaded', filename)
+	print()
+
+
+###########
+## Setup ##
+###########
 
 def downloadAndExtractPatches(download_url):
 	try:
@@ -107,6 +157,11 @@ def copyOriginalFiles(cia_dir, version = None, original_language = 'JA'):
 		print('Error:', str(e))
 		return False
 
+
+#############
+## Release ##
+#############
+
 def copyPatchedFiles(output_folder, cia_dir):
 	try:
 		if VERBOSE >= 1: print('Copying files...')
@@ -150,12 +205,13 @@ def prepareReleasePatches(cia_dir, original_language = 'JA'):
 
 def createReleasePatches(cia_dir, patches_filename, original_language = 'JA'):
 	try:
+		copyfile('3dstool.exe', join(cia_dir, '3dstool.exe'))
 		# create banner patch
 		if exists(join(cia_dir, 'ExtractedBanner')):
 			# rebuild banner
 			if VERBOSE >= 1: print('Rebuilding banner...')
 			rename(join(cia_dir, 'ExtractedBanner', 'banner.cgfx'), join(cia_dir, 'ExtractedBanner', 'banner0.bcmdl'))
-			run('"%s" -c -t banner -f banner.bin --banner-dir ExtractedBanner' % TOOL_PATH, cwd=cia_dir)
+			run('3dstool -c -t banner -f banner.bin --banner-dir ExtractedBanner', cwd=cia_dir, stdout=DEVNULL, stderr=DEVNULL)
 			rename(join(cia_dir, 'ExtractedBanner', 'banner0.bcmdl'), join(cia_dir, 'ExtractedBanner', 'banner.cgfx'))
 			# copy to exeFS (if you want to create a CIA file)
 			if exists(join(cia_dir, 'ExtractedExeFS')):
@@ -188,11 +244,12 @@ def createReleasePatches(cia_dir, patches_filename, original_language = 'JA'):
 		if exists(join(cia_dir, 'ExtractedRomFS')):
 			# rebuild romFS
 			if VERBOSE >= 1: print('Rebuilding RomFS...')
-			run('"%s" -c -t romfs -f CustomRomFS.bin --romfs-dir ExtractedRomFS' % TOOL_PATH, cwd=cia_dir)
+			run('3dstool -c -t romfs -f CustomRomFS.bin --romfs-dir ExtractedRomFS', cwd=cia_dir, stdout=DEVNULL, stderr=DEVNULL)
 			# create patch
 			if VERBOSE >= 1: print('Creating RomFS patch...')
 			run('xdelta -f -s DecryptedRomFS.bin CustomRomFS.bin RomFS.xdelta', cwd=cia_dir)
 			if VERBOSE >= 1: print()
+		remove(join(cia_dir, '3dstool.exe'))
 		
 		# archive patches
 		directory = dirname(patches_filename)
