@@ -21,7 +21,7 @@ from WorkspaceManager import checkTool, downloadExe
 
 CONFIG_FILE = 'tt-config.json'
 
-VERSION = 'v2.3.0'
+VERSION = 'v2.4.0'
 REPOSITORY = r'Ich73/TranslationToolkit'
 
 
