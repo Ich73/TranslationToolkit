@@ -4,6 +4,7 @@
 !/.gitignore
 !/LICENSE
 !/README.md
+!/requirements.txt
 !/FileReplacer.py
 !/SaveChanger.py
 !/SendToCitra.py
