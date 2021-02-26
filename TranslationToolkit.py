@@ -10,6 +10,7 @@ from tempfile import mkdtemp
 import json
 import webbrowser
 from urllib.request import urlopen
+import platform
 
 from TranslationPatcher import applyPatches, createPatches, distribute
 from SendViaFTP import sendFiles as sendFilesViaFTP
@@ -23,6 +24,19 @@ CONFIG_FILE = 'tt-config.json'
 
 VERSION = 'v2.4.0'
 REPOSITORY = r'Ich73/TranslationToolkit'
+
+TOOLS = {
+	'xdelta': {
+		'version': '3.1.0',
+		'win64': r'https://github.com/jmacd/xdelta-gpl/releases/download/v3.1.0/xdelta3-3.1.0-x86_64.exe.zip',
+		'win32': r'https://github.com/jmacd/xdelta-gpl/releases/download/v3.1.0/xdelta3-3.1.0-i686.exe.zip',
+	},
+	'3dstool': {
+		'version': '1.1.0',
+		'win64': r'https://github.com/dnasdw/3dstool/releases/download/v1.1.0/3dstool.zip',
+		'win32': r'https://github.com/dnasdw/3dstool/releases/download/v1.1.0/3dstool.zip',
+	},
+}
 
 
 ###########
@@ -117,13 +131,18 @@ def checkUpdates():
 	except Exception: pass
 
 def checkTools():
+	# check os
+	opSys = 'win' # platform.system(), only win support
+	if '64' in platform.machine(): opSys += '64'
+	else: opSys += '32'
+	
 	# check xdelta
-	version, url = Config.get('xdelta', ('3.1.0', r'https://github.com/jmacd/xdelta-gpl/releases/download/v3.1.0/xdelta3-3.1.0-x86_64.exe.zip'))
+	version, url = Config.get('xdelta', (TOOLS['xdelta']['version'], TOOLS['xdelta'][opSys]))
 	if not checkTool('xdelta -V', version):
 		downloadExe(url, 'xdelta.exe')
 	
 	# check 3dstool
-	version, url = Config.get('3dstool', ('1.1.0', r'https://github.com/dnasdw/3dstool/releases/download/v1.1.0/3dstool.zip'))
+	version, url = Config.get('3dstool', (TOOLS['3dstool']['version'], TOOLS['3dstool'][opSys]))
 	if not checkTool('3dstool', version):
 		downloadExe(url, '3dstool.exe')
 
