@@ -2,15 +2,14 @@
 [![](https://img.shields.io/github/downloads/Ich73/TranslationToolkit/total?label=Downloads)](https://github.com/Ich73/TranslationToolkit/releases)
 [![](https://img.shields.io/github/license/Ich73/TranslationToolkit?label=License)](/LICENSE)
 # Translation Toolkit
-Translation Toolkit is a command line interface to simplify the workflow for translating games.  
-It is especially designed for the [DQM2-FanTranslation](https://github.com/Ich73/DQM2-FanTranslation) project.  
+Translation Toolkit is a command line interface to simplify the workflow for translating 3DS games and releasing patches.  
   
 It uses the following tools:
   * [xdelta](https://github.com/jmacd/xdelta-gpl) ([v3.1.0](https://github.com/jmacd/xdelta-gpl/releases/tag/v3.1.0))
   * [3dstool](https://github.com/dnasdw/3dstool) ([v1.1.0](https://github.com/dnasdw/3dstool/releases/tag/v1.1.0))
 
 ## Using Translation Toolkit
-You can download the newest version as an executable from the [Release Page](https://github.com/Ich73/TranslationToolkit/releases/latest). Copy `TranslationToolkit.exe` to the root of your translation directory and run it.
+You can download the newest version as an executable from the [Release Page](https://github.com/Ich73/TranslationToolkit/releases/latest). Extract the archive and copy `TranslationToolkit.exe` to the root of your translation directory and run it.
 
 
 ## Scripts
@@ -117,6 +116,23 @@ The script requires you to specify the following values:
 
 _Options:_
   * `-o=<XY>`: Set the original language to `<XY>` (e.g. `RP -o=JA`).
+
+
+## Configuring Translation Toolkit
+When starting the program it searches for a file named `.ttparams` which defines the file structure of the game and the repository. If the file is missing default values will be used. It is a json file with the following, optional parameters:
+  * `SEP`: The separator token used in `.binJ` and `.e` files as a string of hexadecimal digits. More information can be found in [BinJ Format](https://github.com/Ich73/BinJEditor/wiki/BinJ-Format) and [E Format](https://github.com/Ich73/BinJEditor/wiki/E-Format).  
+    Example: `"E31B"`
+  * `XDELTA`: The base names of the folders in the repository and the corresponding file extensions of game files inside those folders for which `.xdelta` patches should be used as an object from string to list of strings.  
+    Example: `"Banner": [".bcwav", ".cbmd", ".cgfx"]`
+  * `PAT`: The base names of the folders in the repository and the corresponding type of file (`binJ` or `e`), game file extension, save file extension and patch file extension for which `.patJ` or `.patE` patches should be used as an object from string to list of strings.  
+    Example: `"Message": ["binJ", ".binJ", ".savJ", ".patJ"]`
+  * `PARENT`: The base names of the folders in the repository mapped to the directories in the game files as an object from string to string.  
+    Example: `"Banner": "ExtractedBanner"`
+  * `UPDATE_ACTIONS`: A list of operations that should be executed when the `UW` or `SW` script is called as a list of lists. Valid actions are:
+    * `rename-folder`: Rename the folders with the first argument as the base name to folders with the second argument as the base name.  
+      Example: `["rename-folder", ["Code", "ExeFS"]]`
+    * `delete-folder`: Delete the folders with the argument as the base name.  
+      Example: `["delete-folder", "Code"]`
 
 
 ## For Developers
