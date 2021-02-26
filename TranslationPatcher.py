@@ -52,10 +52,10 @@ class Params:
 		Params.loadParams()
 		return Params.prms.get(key, default)
 	
-	def SEP(): return Params._get('SEP')
-	def xdeltaFolders(): return Params._get('XDELTA')
-	def patFolders(): return Params._get('PAT')
-	def parentFolders(): return Params._get('PARENT')
+	def SEP(): return Params._get('SEP', b'\xe3\x1b')
+	def xdeltaFolders(): return Params._get('XDELTA', dict())
+	def patFolders(): return Params._get('PAT', dict())
+	def parentFolders(): return Params._get('PARENT', dict())
 	def updateActions(): return Params._get('UPDATE_ACTIONS', list())
 	
 	def loadDefaults():
@@ -132,9 +132,9 @@ class Params:
 	
 	def parseParams():
 		def hex2bytes(s): return bytes([int(s[i:i+2], 16) for i in range(0, len(s), 2)])
-		Params.prms['SEP'] = hex2bytes(Params.prms['SEP'])
+		if 'SEP' in Params.prms: Params.prms['SEP'] = hex2bytes(Params.prms['SEP'])
 		def parseDir(d): return join(*d.split('/'))
-		Params.prms['PARENT'] = {folder: parseDir(dir) for folder, dir in Params.prms['PARENT'].items()}
+		if 'PARENT' in Params.prms: Params.prms['PARENT'] = {folder: parseDir(dir) for folder, dir in Params.prms['PARENT'].items()}
 
 
 ############
