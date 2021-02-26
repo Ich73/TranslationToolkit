@@ -17,7 +17,8 @@ from SendViaFTP import sendFiles as sendFilesViaFTP
 from SendToCitra import sendFiles as sendFilesToCitra
 from FileReplacer import replaceFiles
 from SaveChanger import updateTableInSave
-from WorkspaceManager import downloadAndExtractPatches, copyOriginalFiles, copyPatchedFiles, prepareReleasePatches, createReleasePatches
+from WorkspaceManager import downloadAndExtractPatches, doUpdateActions, copyOriginalFiles
+from WorkspaceManager import copyPatchedFiles, prepareReleasePatches, createReleasePatches
 from WorkspaceManager import checkTool, downloadExe
 
 CONFIG_FILE = 'tt-config.json'
@@ -439,6 +440,11 @@ def SW(original_language, force_override):
 	
 	print()
 	print()
+	print('~~ Update Actions ~~')
+	doUpdateActions()
+	
+	print()
+	print()
 	print('~~ Copy Original Files ~~')
 	if not copyOriginalFiles(cia_dir, version=None, original_language=original_language):
 		showEnd()
@@ -477,6 +483,11 @@ def UW(original_language, force_override):
 	if not downloadAndExtractPatches(download_url):
 		showEnd()
 		return
+	
+	print()
+	print()
+	print('~~ Update Actions ~~')
+	doUpdateActions()
 	
 	print()
 	print()

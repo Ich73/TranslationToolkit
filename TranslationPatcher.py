@@ -21,81 +21,120 @@ from hashlib import md5
 import re
 from zipfile import ZipFile
 from gzip import GzipFile
+import json
 from BinJEditor.JTools import parseBinJ, createBinJ, parseE, createE, parseDatJ, createDatJ, parseDatE, parseTabE, parseSpt
 from tempfile import gettempdir as tempdir
 from subprocess import run
 
+PARAMS_FILE = '.ttparams'
+
 # 0: nothing, 1: minimal, 2: default, 3: all
 VERBOSE = 2
 
-# default DQM separator token
-SEP = b'\xe3\x1b'
 
-# folders to search for files and patches
-XDELTA_FOLDERS = {
-	'Banner':      ['.bcwav', '.cbmd', '.cgfx'],
-	'Battle':      ['.bcres', '.nut'],
-	'Code':        ['.bin'],
-	'Debug':       ['.bin'],
-	'Effect':      ['.bcres'],
-	'Event':       ['.gz'],
-	'ExtSaveData': ['.icn'],
-	'Field':       ['.bcres', '.nut', '.gz', '.xbb'],
-	'Flash':       ['.flb'],
-	'Font':        ['.bcfnt'],
-	'KeyImage':    ['.bclim'],
-	'Layout':      ['.arc', '.nut'],
-	'Menu':        ['.nut'],
-	'Menu3D':      ['.bcres', '.bcenv'],
-	'Model':       ['.bcres', '.bcenv', '.bcmdl', '.xbb'],
-	'MonsterIcon': ['.bclim'],
-	'NaviMap':     ['.arc'],
-	'NetworkIcon': ['.ctpk'],
-	'Npc':         ['.nut'],
-	'Param':       ['.bin', '.gz'],
-	'PartsIcon':   ['.bclim'],
-	'PresentCode': ['.bin'],
-	'Test':        ['.txt', '.bin', '.nut', '.gz'],
-	'Title':       ['.bcres'],
-	'WiFi':        ['.nut'],
-}
+############
+## Params ##
+############
 
-# folders to search for files, patches and saves
-PAT_FOLDERS = {
-	# folder: (mode, original, save, patch)
-	'Message': ('binJ', '.binJ', '.savJ', '.patJ'),
-	'Event':   ('e',    '.e',    '.savE', '.patE'),
-}
-
-# where to put the folders when distributing
-PARENT_FOLDERS = {
-	'Banner':      'ExtractedBanner',
-	'Battle':      join('ExtractedRomFS', 'data', 'Battle'),
-	'Code':        'ExtractedExeFS',
-	'Debug':       join('ExtractedRomFS', 'data', 'Debug'),
-	'Effect':      join('ExtractedRomFS', 'data', 'Effect'),
-	'Event':       join('ExtractedRomFS', 'data', 'Event'),
-	'ExtSaveData': join('ExtractedRomFS', 'data', 'ExtSaveData'),
-	'Field':       join('ExtractedRomFS', 'data', 'Field'),
-	'Flash':       join('ExtractedRomFS', 'data', 'Flash'),
-	'Font':        join('ExtractedRomFS', 'data', 'Font'),
-	'KeyImage':    join('ExtractedRomFS', 'data', 'KeyImage'),
-	'Layout':      join('ExtractedRomFS', 'data', 'Layout'),
-	'Menu':        join('ExtractedRomFS', 'data', 'Menu'),
-	'Menu3D':      join('ExtractedRomFS', 'data', 'Menu3D'),
-	'Message':     join('ExtractedRomFS', 'data', 'Message'),
-	'Model':       join('ExtractedRomFS', 'data', 'Model'),
-	'MonsterIcon': join('ExtractedRomFS', 'data', 'MonsterIcon'),
-	'NaviMap':     join('ExtractedRomFS', 'data', 'NaviMap'),
-	'NetworkIcon': join('ExtractedRomFS', 'data', 'NetworkIcon'),
-	'Npc':         join('ExtractedRomFS', 'data', 'Npc'),
-	'Param':       join('ExtractedRomFS', 'data', 'Param'),
-	'PartsIcon':   join('ExtractedRomFS', 'data', 'PartsIcon'),
-	'PresentCode': join('ExtractedRomFS', 'data', 'PresentCode'),
-	'Test':        join('ExtractedRomFS', 'data', 'Test'),
-	'Title':       join('ExtractedRomFS', 'data', 'Title'),
-	'WiFi':        join('ExtractedRomFS', 'data', 'WiFi'),
-}
+class Params:
+	prms = None
+	
+	def loadParams(force_reload = False):
+		if not force_reload and Params.prms is not None: return
+		try:
+			with open(PARAMS_FILE, 'r') as file:
+				Params.prms = json.load(file)
+		except:
+			Params.loadDefaults()
+		Params.parseParams()
+	
+	def _get(key, default = None):
+		Params.loadParams()
+		return Params.prms.get(key, default)
+	
+	def SEP(): return Params._get('SEP')
+	def xdeltaFolders(): return Params._get('XDELTA')
+	def patFolders(): return Params._get('PAT')
+	def parentFolders(): return Params._get('PARENT')
+	def updateActions(): return Params._get('UPDATE_ACTIONS', list())
+	
+	def loadDefaults():
+		Params.prms = dict()
+		# separator token
+		Params.prms['SEP'] = 'E31B'
+		# folders to search for files
+		Params.prms['XDELTA'] = {
+			'Banner': ['.bcwav', '.cbmd', '.cgfx'],
+			'Code': ['.bin'],
+			'ExeFS': ['.bin'],
+			'Manual': ['.bcma'],
+			'Battle': ['.bcres', '.nut'],
+			'Debug': ['.bin'],
+			'Effect': ['.bcres'],
+			'Event': ['.gz'],
+			'ExtSaveData': ['.icn'],
+			'Field': ['.bcres', '.nut', '.gz', '.xbb'],
+			'Flash': ['.flb'],
+			'Font': ['.bcfnt'],
+			'KeyImage': ['.bclim'],
+			'Layout': ['.arc', '.nut'],
+			'Menu': ['.nut'],
+			'Menu3D': ['.bcres', '.bcenv'],
+			'Model': ['.bcres', '.bcenv', '.bcmdl', '.xbb'],
+			'MonsterIcon': ['.bclim'],
+			'NaviMap': ['.arc'],
+			'NetworkIcon': ['.ctpk'],
+			'Npc': ['.nut'],
+			'Param': ['.bin', '.gz'],
+			'PartsIcon': ['.bclim'],
+			'PresentCode': ['.bin'],
+			'Test': ['.txt', '.bin', '.nut', '.gz'],
+			'Title': ['.bcres'],
+			'WiFi': ['.nut']
+		}
+		# folders to search for files, patches and saves
+		Params.prms['PAT'] = {
+			# folder: (mode, original, save, patch)
+			'Message': ['binJ', '.binJ', '.savJ', '.patJ'],
+			'Event': ['e', '.e', '.savE', '.patE']
+		}
+		# where to put the folders when distributing
+		Params.prms['PARENT'] = {
+			'Banner': 'ExtractedBanner',
+			'Code': 'ExtractedExeFS',
+			'ExeFS': 'ExtractedExeFS',
+			'Manual': 'ExtractedManual',
+			'Battle': 'ExtractedRomFS/data/Battle',
+			'Debug': 'ExtractedRomFS/data/Debug',
+			'Effect': 'ExtractedRomFS/data/Effect',
+			'Event': 'ExtractedRomFS/data/Event',
+			'ExtSaveData': 'ExtractedRomFS/data/ExtSaveData',
+			'Field': 'ExtractedRomFS/data/Field',
+			'Flash': 'ExtractedRomFS/data/Flash',
+			'Font': 'ExtractedRomFS/data/Font',
+			'KeyImage': 'ExtractedRomFS/data/KeyImage',
+			'Layout': 'ExtractedRomFS/data/Layout',
+			'Menu': 'ExtractedRomFS/data/Menu',
+			'Menu3D': 'ExtractedRomFS/data/Menu3D',
+			'Message': 'ExtractedRomFS/data/Message',
+			'Model': 'ExtractedRomFS/data/Model',
+			'MonsterIcon': 'ExtractedRomFS/data/MonsterIcon',
+			'NaviMap': 'ExtractedRomFS/data/NaviMap',
+			'NetworkIcon': 'ExtractedRomFS/data/NetworkIcon',
+			'Npc': 'ExtractedRomFS/data/Npc',
+			'Param': 'ExtractedRomFS/data/Param',
+			'PartsIcon': 'ExtractedRomFS/data/PartsIcon',
+			'PresentCode': 'ExtractedRomFS/data/PresentCode',
+			'Test': 'ExtractedRomFS/data/Test',
+			'Title': 'ExtractedRomFS/data/Title',
+			'WiFi': 'ExtractedRomFS/data/WiFi'
+		}
+	
+	def parseParams():
+		def hex2bytes(s): return bytes([int(s[i:i+2], 16) for i in range(0, len(s), 2)])
+		Params.prms['SEP'] = hex2bytes(Params.prms['SEP'])
+		def parseDir(d): return join(*d.split('/'))
+		Params.prms['PARENT'] = {folder: parseDir(dir) for folder, dir in Params.prms['PARENT'].items()}
 
 
 ############
@@ -198,10 +237,10 @@ def applyPatPatches(original_language, force_override):
 		try:
 			if mode == 'binJ':
 				with open(orig_file, 'rb') as file: bin = file.read()
-				orig_data, extra = parseBinJ(bin, SEP)
+				orig_data, extra = parseBinJ(bin, Params.SEP())
 			elif mode == 'e':
 				with GzipFile(orig_file, 'r') as file: bin = file.read()
-				orig_data, extra = parseE(bin, SEP)
+				orig_data, extra = parseE(bin, Params.SEP())
 		except:
 			print(' !', 'Error: Parsing %s file failed:' % mode, join(*extpath(orig_file)))
 			return
@@ -217,10 +256,10 @@ def applyPatPatches(original_language, force_override):
 		output_data = [v if v else orig_data[i] for i, v in enumerate(edit_data)]
 		# save output file
 		if mode == 'binJ':
-			bin = createBinJ(output_data, SEP, extra)
+			bin = createBinJ(output_data, Params.SEP(), extra)
 			with open(output_file, 'wb') as file: file.write(bin)
 		elif mode == 'e':
-			bin = createE(output_data, SEP, extra)
+			bin = createE(output_data, Params.SEP(), extra)
 			with open(output_file, 'wb') as file:
 				with GzipFile(fileobj=file, mode='w', filename='', mtime=0) as gzipFile: gzipFile.write(bin)
 	
@@ -280,10 +319,10 @@ def applyPatPatches(original_language, force_override):
 			remove(extra_filename)
 	
 	ctr = dict()
-	folders = {k: v[3] for k, v in PAT_FOLDERS.items()}
+	folders = {k: v[3] for k, v in Params.patFolders().items()}
 	for folder, patch_file, orig_folder in loopFiles(folders, original_language):
 		simplename = extpath(patch_file)
-		mode, ext_orig, ext_save, ext_patch = PAT_FOLDERS[folder]
+		mode, ext_orig, ext_save, ext_patch = Params.patFolders()[folder]
 		msg_prefix = ' * %s:' % join(*simplename[:-1], splitext(simplename[-1])[0] + ext_orig)
 		
 		# find corresponding original file
@@ -348,7 +387,7 @@ def applyXDeltaPatches(original_language, force_override):
 		run(['xdelta', '-f', '-d', '-s', orig_file, patch_file, output_file])
 	
 	ctr = dict()
-	folders = dict(zip(XDELTA_FOLDERS.keys(), ['.xdelta']*len(XDELTA_FOLDERS)))
+	folders = dict(zip(Params.xdeltaFolders().keys(), ['.xdelta']*len(Params.xdeltaFolders())))
 	for _, patch_file, orig_folder in loopFiles(folders, original_language):
 		simplename = extpath(patch_file)
 		simplename[-1] = simplename[-1][:-len('.xdelta')]
@@ -423,10 +462,10 @@ def createPatPatches(original_language, force_override):
 			try:
 				if mode == 'binJ':
 					with open(file, 'rb') as file: bin = file.read()
-					return parseBinJ(bin, SEP)
+					return parseBinJ(bin, Params.SEP())
 				elif mode == 'e':
 					with GzipFile(file, 'r') as file: bin = file.read()
-					return parseE(bin, SEP)
+					return parseE(bin, Params.SEP())
 			except:
 				print(' !', 'Error: Parsing %s file failed:' % mode, join(*extpath(file)))
 				return None, None
@@ -487,7 +526,7 @@ def createPatPatches(original_language, force_override):
 	
 	# iterate over all pat folders
 	ctr = dict()
-	for folder, (mode, ext_orig, ext_save, ext_patch) in PAT_FOLDERS.items():
+	for folder, (mode, ext_orig, ext_save, ext_patch) in Params.patFolders().items():
 		# iterate over all files
 		for folder, shortname, type, orig_folder in collectFiles(folder, ext_orig, ext_save):
 			msg_prefix = ' * %s:' % join(shortname + ext_patch)
@@ -554,7 +593,7 @@ def createXDeltaPatches(original_language, force_override):
 		run(['xdelta', '-f', '-s', orig_file, edit_file, patch_file])
 	
 	ctr = dict()
-	for _, edit_file, orig_folder in loopFiles(XDELTA_FOLDERS, original_language):
+	for _, edit_file, orig_folder in loopFiles(Params.xdeltaFolders(), original_language):
 		simplename = extpath(edit_file)
 		msg_prefix = ' * %s:' % join(*simplename[:-1], simplename[-1]+'.xdelta')
 		
@@ -673,7 +712,7 @@ def distributeBinJAndEFiles(languages, versions, original_language, destination_
 		elif ext == '.binJ':
 			try:
 				with open(filename, 'rb') as file: bin = file.read()
-				return parseBinJ(bin, SEP)
+				return parseBinJ(bin, Params.SEP())
 			except:
 				print(' !', 'Error: Parsing .binJ file failed.')
 				return None, None
@@ -681,17 +720,17 @@ def distributeBinJAndEFiles(languages, versions, original_language, destination_
 		elif ext == '.e':
 			try:
 				with GzipFile(filename, 'r') as file: bin = file.read()
-				return parseE(bin, SEP)
+				return parseE(bin, Params.SEP())
 			except:
 				print(' !', 'Error: Parsing .e file failed.')
 				return None, None
 	
 	def saveBinJ(filename, data, extra):
-		bin = createBinJ(data, SEP, extra)
+		bin = createBinJ(data, Params.SEP(), extra)
 		with open(filename, 'wb') as file: file.write(bin)
 	
 	def saveE(filename, data, extra):
-		bin = createE(data, SEP, extra)
+		bin = createE(data, Params.SEP(), extra)
 		with open(filename, 'wb') as file:
 			with GzipFile(fileobj=file, mode='w', filename='', mtime=0) as gzipFile: gzipFile.write(bin)
 	
@@ -747,7 +786,7 @@ def distributeBinJAndEFiles(languages, versions, original_language, destination_
 	
 	# iterate over all patj folders
 	ctr = dict()
-	for folder, (mode, ext_orig, ext_save, ext_patch) in PAT_FOLDERS.items():
+	for folder, (mode, ext_orig, ext_save, ext_patch) in Params.patFolders().items():
 		for ver in versions: # iterate over versions
 			# collect files
 			files = collectFiles(folder, ext_orig, ext_save, ext_patch, ver)
@@ -757,7 +796,7 @@ def distributeBinJAndEFiles(languages, versions, original_language, destination_
 			if VERBOSE >= 3 or VERBOSE >= 1 and len(files) > 0: print(joinFolder(folder, ver), '[%d]' % len(files))
 			
 			# create output files
-			dest_folder = join(destination_dir, PARENT_FOLDERS[folder])
+			dest_folder = join(destination_dir, Params.parentFolders()[folder])
 			for shortname, file_list in files.items():
 				msg_prefix = ' * %s%s:' % (shortname, ext_orig)
 				dest_file = join(dest_folder, shortname + ext_orig)
@@ -819,7 +858,7 @@ def distributeOtherFiles(languages, versions, original_language, destination_dir
 	
 	# iterate over all xdelta folders
 	ctr = dict()
-	for folder, types in XDELTA_FOLDERS.items():
+	for folder, types in Params.xdeltaFolders().items():
 		for ver in versions: # iterate over versions
 			# collect files
 			files = collectFiles(folder, types, ver)
@@ -829,7 +868,7 @@ def distributeOtherFiles(languages, versions, original_language, destination_dir
 			if VERBOSE >= 3 or VERBOSE >= 1 and len(files) > 0: print(joinFolder(folder, ver), '[%d]' % len(files))
 			
 			# copy collected files
-			dest_folder = join(destination_dir, PARENT_FOLDERS[folder])
+			dest_folder = join(destination_dir, Params.parentFolders()[folder])
 			for source_file, simplename in files:
 				msg_prefix = ' * %s:' % source_file
 				dest_file = join(dest_folder, *simplename)

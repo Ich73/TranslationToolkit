@@ -10,10 +10,10 @@ from zipfile import ZipFile
 from io import BytesIO
 from urllib.request import urlopen
 from tempfile import mkdtemp
-from shutil import move, rmtree, copyfile
+from shutil import move, rmtree, copyfile, copytree
 import re
 
-from TranslationPatcher import hash, joinFolder, XDELTA_FOLDERS, PAT_FOLDERS, PARENT_FOLDERS
+from TranslationPatcher import hash, splitFolder, joinFolder, Params
 
 # 0: nothing, 1: normal, 2: all
 VERBOSE = 1
@@ -120,18 +120,45 @@ def downloadAndExtractPatches(download_url):
 		print('Error:', str(e))
 		return False
 
+def doUpdateActions():
+	# force reloading params in case they changed
+	Params.loadParams(force_reload = True)
+	
+	# iterate over all actions in params
+	for action, options in Params.updateActions():
+		
+		# rename-folder -> rename matching folders and copy over all files without overriding existing files
+		if action.lower() == 'rename-folder':
+			old_folder, new_folder = options
+			directories = [splitFolder(dir) for dir in listdir('.') if isdir(dir) and splitFolder(dir)['folder'] == old_folder]
+			for dir in directories:
+				old_dir = joinFolder(old_folder, dir.get('lang'), dir.get('version'))
+				new_dir = joinFolder(new_folder, dir.get('lang'), dir.get('version'))
+				if VERBOSE >= 1: print('Copy %s to %s' % (old_dir, new_dir))
+				copytree(old_dir, new_dir, ignore=lambda _, l: [f for f in l if exists(join(new_dir, f))], dirs_exist_ok=True)
+		
+		# delete-folder -> delete all matching folders
+		if action.lower() == 'delete-folder':
+			folder = options
+			directories = [dir for dir in listdir('.') if isdir(dir) and splitFolder(dir)['folder'] == old_folder]
+			for dir in directories:
+				if VERBOSE >= 1: print('Delete %s' % dir)
+				rmtree(dir)
+	
+	if VERBOSE >= 1: print('Finished all actions.')
+
 def copyOriginalFiles(cia_dir, version = None, original_language = 'JA'):
 	try:
 		# collect patched folders
-		folders = XDELTA_FOLDERS.copy() # merge xdelta and pat folders
-		for k, v in PAT_FOLDERS.items(): folders[k] = folders.get(k, list()) + [v[1]]
+		folders = Params.xdeltaFolders().copy() # merge xdelta and pat folders
+		for k, v in Params.patFolders().items(): folders[k] = folders.get(k, list()) + [v[1]]
 		folders = {folder: types for folder, types in folders.items() # only keep existing folders
 					if exists(folder) or any(x.split('_')[0] == folder for x in listdir('.'))}
 		
 		# copy files
 		ctr = dict()
 		for folder, types in sorted(folders.items()):
-			cia_folder = join(cia_dir, PARENT_FOLDERS[folder])
+			cia_folder = join(cia_dir, Params.parentFolders()[folder])
 			workspace_folder = joinFolder(folder, original_language, version)
 			if VERBOSE >= 1: print(workspace_folder)
 			for original_file in [join(dp, f) for dp, dn, fn in walk(cia_folder) for f in fn if splitext(f)[1] in types]:
