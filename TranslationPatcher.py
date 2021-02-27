@@ -245,7 +245,7 @@ def applyPatPatches(original_language, force_override):
 			print(' !', 'Error: Parsing %s file failed:' % mode, join(*extpath(orig_file)))
 			return
 		# read patch file
-		with open(patch_file, 'r', encoding = 'ANSI') as file: patj = file.read()
+		with open(patch_file, 'r', encoding = 'ASCII') as file: patj = file.read()
 		edit_data = parseDatJ(patj)
 		# check if compatible
 		if len(edit_data) != len(orig_data):
@@ -266,7 +266,7 @@ def applyPatPatches(original_language, force_override):
 	def applyPatToSav(save_file, patch_file, output_file):
 		# read save file
 		with ZipFile(save_file, 'r') as zip:
-			origj = zip.read('orig.datJ').decode('ANSI')
+			origj = zip.read('orig.datJ').decode('ASCII')
 			sep_from_save = zip.read('SEP.bin')
 			specialj = zip.read('special.tabJ')
 			decodej = zip.read('decode.tabJ')
@@ -275,7 +275,7 @@ def applyPatPatches(original_language, force_override):
 			extra = [zip.read(file) for file in extra_files]
 		orig_data = parseDatJ(origj)
 		# read patch file and override edit_data
-		with open(patch_file, 'r', encoding = 'ANSI') as file: patj = file.read()
+		with open(patch_file, 'r', encoding = 'ASCII') as file: patj = file.read()
 		edit_data = parseDatJ(patj)
 		# check if compatible
 		if len(edit_data) != len(orig_data):
@@ -286,9 +286,9 @@ def applyPatPatches(original_language, force_override):
 		origj = createDatJ(orig_data)
 		editj = createDatJ(edit_data)
 		orig_filename = join(tempdir(), 'orig.datJ')
-		with open(orig_filename, 'w', encoding = 'ANSI', newline = '\n') as file: file.write(origj)
+		with open(orig_filename, 'w', encoding = 'ASCII', newline = '\n') as file: file.write(origj)
 		edit_filename = join(tempdir(), 'edit.datJ')
-		with open(edit_filename, 'w', encoding = 'ANSI', newline = '\n') as file: file.write(editj)
+		with open(edit_filename, 'w', encoding = 'ASCII', newline = '\n') as file: file.write(editj)
 		sep_filename = join(tempdir(), 'SEP.bin')
 		with open(sep_filename, 'wb') as file: file.write(sep_from_save)
 		special_filename = join(tempdir(), 'special.tabJ')
@@ -450,11 +450,11 @@ def createPatPatches(original_language, force_override):
 	def createPatFromSav(save_file, patch_file):
 		# read edit data from save
 		with ZipFile(save_file, 'r') as zip:
-			data = zip.read('edit.datJ').decode('ANSI')
+			data = zip.read('edit.datJ').decode('ASCII')
 		# correct newlines
 		data = createDatJ(parseDatJ(data))
 		# save patch file
-		with open(patch_file, 'w', encoding = 'ANSI', newline = '\n') as file:
+		with open(patch_file, 'w', encoding = 'ASCII', newline = '\n') as file:
 			file.write(data)
 	
 	def createPatFromOrigAndEdit(orig_file, edit_file, patch_file, mode):
@@ -677,11 +677,11 @@ def distributeBinJAndEFiles(languages, versions, original_language, destination_
 		ext = splitext(filename)[1]
 		# savJ/savE -> get edit data
 		if ext in ['.savJ', '.savE']:
-			with ZipFile(filename, 'r') as zip: datj = zip.read('edit.datJ').decode('ANSI')
+			with ZipFile(filename, 'r') as zip: datj = zip.read('edit.datJ').decode('ASCII')
 			return parseDatJ(datj)
 		# patJ/patE -> read edit data
 		elif ext in ['.patJ', '.patE']:
-			with open(filename, 'r', encoding = 'ANSI') as file: patj = file.read()
+			with open(filename, 'r', encoding = 'ASCII') as file: patj = file.read()
 			return parseDatJ(patj)
 		# binJ/e -> read orig data
 		elif ext in ['.binJ', '.e']:
@@ -692,13 +692,13 @@ def distributeBinJAndEFiles(languages, versions, original_language, destination_
 		# savJ -> get orig data and extra
 		if ext == '.savJ':
 			with ZipFile(filename, 'r') as zip:
-				datj = zip.read('orig.datJ').decode('ANSI')
+				datj = zip.read('orig.datJ').decode('ASCII')
 				prefix = zip.read('prefix.bin')
 			return parseDatJ(datj), {'prefix': prefix}
 		# savE -> get orig data and extra
 		elif ext == '.savE':
 			with ZipFile(filename, 'r') as zip:
-				datj = zip.read('orig.datJ').decode('ANSI')
+				datj = zip.read('orig.datJ').decode('ASCII')
 				prefix = zip.read('prefix.bin')
 				header = zip.read('header.datE').decode('ASCII')
 				scripts = zip.read('scripts.spt').decode('ASCII')
