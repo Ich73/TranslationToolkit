@@ -4,7 +4,7 @@
 """
 
 from ftplib import FTP
-from os import walk, listdir, sep
+from os import walk, sep
 from os.path import normpath, basename, join, getmtime
 from time import strptime, localtime
 
