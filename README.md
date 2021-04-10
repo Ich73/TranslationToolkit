@@ -7,6 +7,8 @@ Translation Toolkit is a command line interface to simplify the workflow for tra
 It uses the following tools:
   * [xdelta](https://github.com/jmacd/xdelta-gpl) ([v3.1.0](https://github.com/jmacd/xdelta-gpl/releases/tag/v3.1.0))
   * [3dstool](https://github.com/dnasdw/3dstool) ([v1.1.0](https://github.com/dnasdw/3dstool/releases/tag/v1.1.0))
+  * [ctrtool](https://github.com/3DSGuy/Project_CTR) ([v0.7](https://github.com/3DSGuy/Project_CTR/releases/tag/ctrtool-v0.7))
+  * [makerom](https://github.com/3DSGuy/Project_CTR) ([v0.17](https://github.com/3DSGuy/Project_CTR/releases/tag/makerom-v0.17))
 
 ## Using Translation Toolkit
 You can download the newest version as an executable from the [Release Page](https://github.com/Ich73/TranslationToolkit/releases/latest). Extract the archive and copy `TranslationToolkit.exe` to the root of your translation directory and run it.
@@ -85,7 +87,7 @@ The script requires you to specify the following values:
   * `Table File`: The filename of the updated decoding table. This table will be stored inside the save files.
 
 ### Setup Workspace (SW)
-This script is used to download the latest patches from the repository, copy the required original files from the extracted CIA and run the AP script.
+This script is used to download the latest patches from the repository, copy the required original files from the extracted CIA and run the `AP` script.
   
 The script requires you to specify the following values:
   * `Download URL`: The url for downloading all patches as a zip file.
@@ -96,7 +98,7 @@ _Options:_
   * `-o=<XY>`: Set the original language to `<XY>` (e.g. `SW -o=JA`).
 
 ### Update Workspace (UW)
-This script is used to download the latest patches from the repository and run the AP script.
+This script is used to download the latest patches from the repository and run the `AP` script.
   
 The script requires you to specify the following values:
   * `Download URL`: The url for downloading all patches as a zip file.
@@ -116,6 +118,27 @@ The script requires you to specify the following values:
 
 _Options:_
   * `-o=<XY>`: Set the original language to `<XY>` (e.g. `RP -o=JA`).
+
+### Extract Game (EG)
+This script is used to extract a `.cia` or `.3ds` file in order to use the extracted folder for the `SW` script.
+
+The script requires you to specify the following values:
+  * `Game File`: The full path to the `.cia` or `.3ds` to extract.
+  * `Game Folder`: The full path to the folder the game should be extracted to. This folder can then be used by the `SW` script.
+
+### Rebuild Game (RG)
+This script is used to rebuild a `.cia` or `.3ds` file after using the `RP` script.
+
+The script requires you to specify the following values:
+  * `Game Folder`: The full path to the folder containing the game files. The folder from the `RP` script can be used for it.
+  * `Game File`: The full path to the destination `.cia` or `.3ds` file to create.
+  * `CIA Version`: If you want to rebuild a `.cia` file you need to specify a version as a string (e.g. `v1.0.0`) or integer (e.g. `1024`).
+
+### Distribute & Send via FTP (DS)
+This script combines the `D` and `S` scripts.
+
+### Distribute & Send to Citra (DSC)
+This script combines the `D` and `SC` scripts.
 
 
 ## Configuring Translation Toolkit
