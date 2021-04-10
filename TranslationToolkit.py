@@ -3,14 +3,16 @@
 <<<
 """
 
-from os import system, listdir, getenv
-from os.path import join, exists, isfile, isdir
+from os import system, listdir, getenv, name as os_name
+from os.path import join, splitext, exists, isfile, isdir
 from shutil import rmtree
 from tempfile import mkdtemp
 import json
 import webbrowser
 from urllib.request import urlopen
 import platform
+import ssl
+import re
 
 from TranslationPatcher import applyPatches, createPatches, distribute
 from SendViaFTP import sendFiles as sendFilesViaFTP
@@ -19,7 +21,8 @@ from FileReplacer import replaceFiles
 from SaveChanger import updateTableInSave
 from WorkspaceManager import downloadAndExtractPatches, doUpdateActions, copyOriginalFiles
 from WorkspaceManager import copyPatchedFiles, prepareReleasePatches, createReleasePatches
-from WorkspaceManager import checkTool, downloadExe
+from WorkspaceManager import checkTool, downloadTool
+from GameManager import extractGame, rebuildGame
 
 CONFIG_FILE = 'tt-config.json'
 
@@ -29,20 +32,40 @@ REPOSITORY = r'Ich73/TranslationToolkit'
 TOOLS = {
 	'xdelta': {
 		'version': '3.1.0',
-		'win64': r'https://github.com/jmacd/xdelta-gpl/releases/download/v3.1.0/xdelta3-3.1.0-x86_64.exe.zip',
-		'win32': r'https://github.com/jmacd/xdelta-gpl/releases/download/v3.1.0/xdelta3-3.1.0-i686.exe.zip',
+		'win64': {'url': r'https://github.com/jmacd/xdelta-gpl/releases/download/v3.1.0/xdelta3-3.1.0-x86_64.exe.zip', 'exe': 'xdelta.exe'},
+		'win32': {'url': r'https://github.com/jmacd/xdelta-gpl/releases/download/v3.1.0/xdelta3-3.1.0-i686.exe.zip', 'exe': 'xdelta.exe'},
+		'linux64': {'url': r'https://github.com/Ich73/xdelta-LinuxBuilds/releases/download/v3.1.0/xdelta3-linux_x86_64.zip', 'exe': 'xdelta'},
 	},
 	'3dstool': {
 		'version': '1.1.0',
-		'win64': r'https://github.com/dnasdw/3dstool/releases/download/v1.1.0/3dstool.zip',
-		'win32': r'https://github.com/dnasdw/3dstool/releases/download/v1.1.0/3dstool.zip',
+		'win64': {'url': r'https://github.com/dnasdw/3dstool/releases/download/v1.1.0/3dstool.zip', 'exe': '3dstool.exe'},
+		'win32': {'url': r'https://github.com/dnasdw/3dstool/releases/download/v1.1.0/3dstool.zip', 'exe': '3dstool.exe'},
+		'linux64': {'url': r'https://github.com/dnasdw/3dstool/releases/download/v1.1.0/3dstool_linux_x86_64.tar.gz', 'exe': '3dstool'},
 	},
+	'ctrtool': {
+		'version': '0.7',
+		'win64': {'url': r'https://github.com/3DSGuy/Project_CTR/releases/download/ctrtool-v0.7/ctrtool-v0.7-win_x86_64.zip', 'exe': 'ctrtool.exe'},
+		'win32': {'url': r'https://github.com/Ich73/Project-CTR-WindowsBuilds/releases/download/ctrtool-v0.7/ctrtool-v0.7-win_i686.zip', 'exe': 'ctrtool.exe'},
+		'linux64': {'url': r'https://github.com/3DSGuy/Project_CTR/releases/download/ctrtool-v0.7/ctrtool-v0.7-ubuntu_x86_64.zip', 'exe': 'ctrtool'},
+	},
+	'makerom': {
+		'version': '0.17',
+		'win64': {'url': r'https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.17/makerom-v0.17-win_x86_64.zip', 'exe': 'makerom.exe'},
+		'win32': {'url': r'https://github.com/Ich73/Project-CTR-WindowsBuilds/releases/download/makerom-v0.17/makerom-v0.17-win_i686.zip', 'exe': 'makerom.exe'},
+		'linux64': {'url': r'https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.17/makerom-v0.17-ubuntu_x86_64.zip', 'exe': 'makerom'},
+	}
 }
 
 
 ###########
 ## Setup ##
 ###########
+
+# check os
+if 'windows' in platform.system().lower(): opSys = 'win'
+else: opSys = 'linux'
+if '64' in platform.machine(): opSys += '64'
+else: opSys += '32'
 
 # set windows taskbar icon
 try:
@@ -91,7 +114,7 @@ def checkUpdates():
 	try:
 		# query api
 		latest = r'https://api.github.com/repos/%s/releases/latest' % REPOSITORY
-		with urlopen(latest, timeout = 1) as url:
+		with urlopen(latest, timeout = 1, context=ssl._create_unverified_context()) as url:
 			data = json.loads(url.read().decode())
 		tag = data['tag_name']
 		link = data['html_url']
@@ -132,20 +155,25 @@ def checkUpdates():
 	except Exception: pass
 
 def checkTools():
-	# check os
-	opSys = 'win' # platform.system(), only win support
-	if '64' in platform.machine(): opSys += '64'
-	else: opSys += '32'
-	
 	# check xdelta
-	version, url = Config.get('xdelta', (TOOLS['xdelta']['version'], TOOLS['xdelta'][opSys]))
-	if not checkTool('xdelta -V', version):
-		downloadExe(url, 'xdelta.exe')
+	version, url = Config.get('xdelta', (TOOLS['xdelta']['version'], TOOLS['xdelta'][opSys]['url']))
+	if not checkTool(TOOLS['xdelta'][opSys]['exe'], version, args = '-V'):
+		downloadTool(url, TOOLS['xdelta'][opSys]['exe'])
 	
 	# check 3dstool
-	version, url = Config.get('3dstool', (TOOLS['3dstool']['version'], TOOLS['3dstool'][opSys]))
-	if not checkTool('3dstool', version):
-		downloadExe(url, '3dstool.exe')
+	version, url = Config.get('3dstool', (TOOLS['3dstool']['version'], TOOLS['3dstool'][opSys]['url']))
+	if not checkTool(TOOLS['3dstool'][opSys]['exe'], version):
+		downloadTool(url, TOOLS['3dstool'][opSys]['exe'])
+	
+	# check ctrtool
+	version, url = Config.get('ctrtool', (TOOLS['ctrtool']['version'], TOOLS['ctrtool'][opSys]['url']))
+	if not checkTool(TOOLS['ctrtool'][opSys]['exe'], version):
+		downloadTool(url, TOOLS['ctrtool'][opSys]['exe'])
+	
+	# check makerom
+	version, url = Config.get('makerom', (TOOLS['makerom']['version'], TOOLS['makerom'][opSys]['url']))
+	if not checkTool(TOOLS['makerom'][opSys]['exe'], version):
+		downloadTool(url, TOOLS['makerom'][opSys]['exe'])
 
 
 #############
@@ -178,20 +206,18 @@ def askParamter(name, key, default = '', description = None, hide_fallback = Fal
 	return command
 
 def AP(original_language, force_override):
-	system('cls')
+	cls()
 	if not verifyStart(): return
-	applyPatches(original_language=original_language, force_override=force_override)
+	applyPatches(xdelta=TOOLS['xdelta'][opSys]['exe'], original_language=original_language, force_override=force_override)
 	showEnd()
 
 def CP(original_language, force_override):
-	system('cls')
+	cls()
 	if not verifyStart(): return
-	createPatches(original_language=original_language, force_override=force_override)
+	createPatches(xdelta=TOOLS['xdelta'][opSys]['exe'], original_language=original_language, force_override=force_override)
 	showEnd()
 
-def D(original_language, force_override):
-	system('cls')
-	
+def _D():
 	languages = askParamter(
 		name = 'language',
 		description = [
@@ -224,6 +250,13 @@ def D(original_language, force_override):
 	destination_dirs[lang_ver] = destination_dir
 	Config.set('D.dests', destination_dirs)
 	
+	return (languages, version, destination_dir)
+
+def D(original_language, force_override):
+	cls()
+	
+	languages, version, destination_dir = _D()
+	
 	print('Language:', ', '.join(languages))
 	print('Version:', version)
 	print('Destination Folder:', destination_dir)
@@ -233,18 +266,7 @@ def D(original_language, force_override):
 	distribute(languages=languages, version=version, version_only=False, original_language=original_language, destination_dir=destination_dir, force_override=force_override)
 	showEnd()
 
-def S(force_override):
-	system('cls')
-	
-	while True:
-		source_dir = askParamter(
-			name = 'folder',
-			description = ['The folder to send. This is the folder generated by the \'D\' script.'],
-			key = 'S.source',
-			default = '_dist'
-		)
-		if isdir(source_dir): break
-	
+def _S():
 	title_id = askParamter(
 		name = 'title ID',
 		description = ['The title ID of the game to patch.'],
@@ -279,6 +301,22 @@ def S(force_override):
 		hide_fallback = True
 	)
 	
+	return (title_id, ip, port, user, passwd)
+
+def S(force_override):
+	cls()
+	
+	while True:
+		source_dir = askParamter(
+			name = 'folder',
+			description = ['The folder to send. This is the folder generated by the \'D\' script.'],
+			key = 'S.source',
+			default = '_dist'
+		)
+		if isdir(source_dir): break
+	
+	title_id, ip, port, user, passwd = _S()
+	
 	print('Folder:', source_dir)
 	print('Title ID:', title_id)
 	print()
@@ -287,8 +325,53 @@ def S(force_override):
 	sendFilesViaFTP(source_dir=source_dir, title_id=title_id, ip=ip, port=port, user=user, passwd=passwd, force_override=force_override)
 	showEnd()
 
+def DS(original_language, force_override):
+	cls()
+	
+	languages, version, destination_dir = _D()
+	title_id, ip, port, user, passwd = _S()
+	
+	print('Language:', ', '.join(languages))
+	print('Version:', version)
+	print('Destination Folder:', destination_dir)
+	print('Title ID:', title_id)
+	print()
+	
+	if not verifyStart(): return
+	
+	print('~~ Distribute ~~')
+	distribute(languages=languages, version=version, version_only=False, original_language=original_language, destination_dir=destination_dir, force_override=force_override)
+	
+	print()
+	print()
+	print('~~ Send via FTP ~~')
+	sendFilesViaFTP(source_dir=destination_dir, title_id=title_id, ip=ip, port=port, user=user, passwd=passwd, force_override=force_override)
+	
+	showEnd()
+
+def _SC():
+	title_id = askParamter(
+		name = 'title ID',
+		description = ['The title ID of the game to patch.'],
+		key = 'SC.titleid',
+		default = '00040000000cf500'
+	)
+	
+	user_dir = join(getenv('PROGRAMFILES'), 'Citra', 'user') if getenv('PROGRAMFILES') is not None else ''
+	appdata_dir = join(getenv('APPDATA'), 'Citra') if getenv('APPDATA') is not None else ''
+	while True:
+		citra_dir = askParamter(
+			name = 'Citra folder',
+			description = ['Citra\'s mod folder to which the patched files should be copied.'],
+			key = 'SC.citra',
+			default = appdata_dir if not exists(user_dir) else user_dir
+		)
+		if isdir(citra_dir): break
+	
+	return (title_id, citra_dir)
+
 def SC(force_override):
-	system('cls')
+	cls()
 	
 	while True:
 		source_dir = askParamter(
@@ -299,23 +382,7 @@ def SC(force_override):
 		)
 		if isdir(source_dir): break
 	
-	title_id = askParamter(
-		name = 'title ID',
-		description = ['The title ID of the game to patch.'],
-		key = 'SC.titleid',
-		default = '00040000000cf500'
-	)
-	
-	user_dir = join(getenv('PROGRAMFILES'), 'Citra', 'user')
-	appdata_dir = join(getenv('APPDATA'), 'Citra')
-	while True:
-		citra_dir = askParamter(
-			name = 'Citra folder',
-			description = ['Citra\'s mod folder to which the patched files should be copied.'],
-			key = 'SC.citra',
-			default = appdata_dir if not exists(user_dir) else user_dir
-		)
-		if isdir(citra_dir): break
+	title_id, citra_dir = _SC()
 	
 	print('Folder:', source_dir)
 	print('Title ID:', title_id)
@@ -326,8 +393,33 @@ def SC(force_override):
 	sendFilesToCitra(source_dir=source_dir, title_id=title_id, citra_dir=citra_dir, force_override=force_override)
 	showEnd()
 
+def DSC(original_language, force_override):
+	cls()
+	
+	languages, version, destination_dir = _D()
+	title_id, citra_dir = _SC()
+	
+	print('Language:', ', '.join(languages))
+	print('Version:', version)
+	print('Destination Folder:', destination_dir)
+	print('Title ID:', title_id)
+	print('Citra Folder:', citra_dir)
+	print()
+	
+	if not verifyStart(): return
+	
+	print('~~ Distribute ~~')
+	distribute(languages=languages, version=version, version_only=False, original_language=original_language, destination_dir=destination_dir, force_override=force_override)
+	
+	print()
+	print()
+	print('~~ Send to Citra ~~')
+	sendFilesToCitra(source_dir=destination_dir, title_id=title_id, citra_dir=citra_dir, force_override=force_override)
+	
+	showEnd()
+
 def RF():
-	system('cls')
+	cls()
 	
 	while True:
 		source_dir = askParamter(
@@ -356,7 +448,7 @@ def RF():
 	showEnd()
 
 def UD():
-	system('cls')
+	cls()
 	
 	while True:
 		source_dir = askParamter(
@@ -384,7 +476,7 @@ def UD():
 	showEnd()
 
 def SW(original_language, force_override):
-	system('cls')
+	cls()
 	
 	download_url = askParamter(
 		name = 'download URL',
@@ -416,12 +508,14 @@ def SW(original_language, force_override):
 			key = None,
 			fallback = fallbacks[len(updates)][0] if len(fallbacks) > len(updates) else ''
 		)
-		update_cia_dir = askParamter(
-			name = 'update CIA folder',
-			description = ['The full path to the folder containing the extracted update CIA file.'],
-			key = None,
-			fallback = fallbacks[len(updates)][1] if len(fallbacks) > len(updates) else ''
-		)
+		while True:
+			update_cia_dir = askParamter(
+				name = 'update CIA folder',
+				description = ['The full path to the folder containing the extracted update CIA file.'],
+				key = None,
+				fallback = fallbacks[len(updates)][1] if len(fallbacks) > len(updates) else ''
+			)
+			if isdir(update_cia_dir): break
 		updates.append((update_ver, update_cia_dir))
 	Config.set('SW.updates', updates)
 	
@@ -461,12 +555,12 @@ def SW(original_language, force_override):
 	print()
 	print()
 	print('~~ Apply Patches ~~')
-	applyPatches(original_language=original_language, force_override=force_override)
+	applyPatches(xdelta=TOOLS['xdelta'][opSys]['exe'], original_language=original_language, force_override=force_override)
 	
 	showEnd()
 
 def UW(original_language, force_override):
-	system('cls')
+	cls()
 	
 	download_url = askParamter(
 		name = 'download URL',
@@ -492,12 +586,12 @@ def UW(original_language, force_override):
 	print()
 	print()
 	print('~~ Apply Patches ~~')
-	applyPatches(original_language=original_language, force_override=force_override)
+	applyPatches(xdelta=TOOLS['xdelta'][opSys]['exe'], original_language=original_language, force_override=force_override)
 	
 	showEnd()
 
 def RP(original_language):
-	system('cls')
+	cls()
 	
 	languages = askParamter(
 		name = 'language',
@@ -569,9 +663,78 @@ def RP(original_language):
 	print()
 	print()
 	print('~~ Create Release Patches ~~')
-	createReleasePatches(cia_dir, patches_filename, original_language=original_language)
+	createReleasePatches(cia_dir, patches_filename, xdelta=TOOLS['xdelta'][opSys]['exe'], dstool=TOOLS['3dstool'][opSys]['exe'], original_language=original_language)
 	
 	rmtree(temp_dir)
+	showEnd()
+
+def EG():
+	cls()
+	
+	while True:
+		game_file = askParamter(
+			name = 'game file',
+			description = ['The full path to the CIA or 3DS file to extract.'],
+			key = 'EG.gamefile'
+		)
+		if isfile(game_file): break
+	
+	game_dir = askParamter(
+		name = 'game folder',
+		description = ['The full path to the folder the game should be extracted to.'],
+		key = 'EG.gamedir'
+	)
+	
+	print('Game File:', game_file)
+	print('Game Folder:', game_dir)
+	print()
+	
+	if not verifyStart(): return
+	extractGame(game_file=game_file, game_dir=game_dir, dstool=TOOLS['3dstool'][opSys]['exe'], ctrtool=TOOLS['ctrtool'][opSys]['exe'])
+	showEnd()
+
+def RG():
+	cls()
+	
+	while True:
+		game_dir = askParamter(
+			name = 'game folder',
+			description = ['The full path to the folder containing the game files.'],
+			key = 'RG.gamedir'
+		)
+		if isdir(game_dir): break
+	
+	game_file = askParamter(
+		name = 'game file',
+		description = ['The full path to the destination CIA or 3DS file.'],
+		key = 'RG.gamefile'
+	)
+	
+	def version2int(s):
+		s = s[1:] # remove v
+		v = [int(x) for x in s.split('.')] # split into parts
+		v += [0]*(3-len(v)) # add missing parts
+		return v[0]*2**10 + v[1]*2**4 + v[2] # convert to number
+	
+	mode = splitext(game_file)[1][1:].lower()
+	if mode != '3ds':
+		while True:
+			version = askParamter(
+				name = 'CIA version',
+				description = ['The version of the rebuilt CIA as a string (v1.0.0) or integer (1024).'],
+				key = 'RG.version'
+			)
+			if re.match('^v\d\.\d(\.\d)?$', version) or version.isdigit(): break
+		version = int(version) if version.isdigit() else version2int(version)
+	else: version = 0
+	
+	print('Game Folder:', game_dir)
+	print('Game File:', game_file)
+	if mode != '3ds': print('CIA Version:', version)
+	print()
+	
+	if not verifyStart(): return
+	rebuildGame(game_dir=game_dir, game_file=game_file, version=version, dstool=TOOLS['3dstool'][opSys]['exe'], makerom=TOOLS['makerom'][opSys]['exe'])
 	showEnd()
 
 
@@ -582,8 +745,16 @@ def RP(original_language):
 m = 2 # left margin
 w = 96 # width of title box
 
+def cls():
+	""" Clears the screen. """
+	system('cls' if os_name in ['nt', 'dos'] else 'clear')
+
+def rzs(width = w+m+4+m, height = 41):
+	""" Sets the width and height of the screen. """
+	system('mode con: cols=%d lines=%d' % (width, height) if os_name in ['nt', 'dos'] else 'printf "\033[8;%d;%dt"' % (height, width))
+
 def printTitleBox():
-	system('cls')
+	cls()
 	def title(msg=''): print(' '*m + '║ ' + ' '*int((w-len(msg))/2) + msg + ' '*(w-len(msg)-int((w-len(msg))/2)) + ' ║')
 	print()
 	print(' '*m + '╔' + '═'*(w+2) + '╗')
@@ -596,8 +767,10 @@ def printCategory(text):
 	print(' '*m + '~ ' + text + ' ~')
 	print()
 
-def printOption(cmd, text):
-	print(' '*m + '*', cmd, ':', text)
+def printOption(cmd, text, cmd2=None, text2=None):
+	print(' '*m + '*', cmd, ':', text, end='')
+	if cmd2 and text2: print(' '*(w//2-len(cmd)-len(text)-4), '*', cmd2, ':', text2)
+	else: print()
 
 def printInfo(text):
 	print(' '*(m+4), end=' ')
@@ -628,11 +801,11 @@ def menu():
 	printInfo('Sends the folder from the \'D\' script to the 3DS for Luma\'s LayeredFS patching.')
 	printOption('SC', 'Send to Citra')
 	printInfo('Sends the folder from the \'D\' script to Citra\'s mod folder for LayeredFS patching.')
-	printOption('RF', 'Replace Files')
-	printOption('UD', 'Update Decoding Tables')
+	printOption('RF', 'Replace Files', 'EG', 'Extract Game')
+	printOption('UD', 'Update Decoding Tables', 'RG', 'Rebuild Game')
 	printOption('SW', 'Setup Workspace')
-	printOption('UW', 'Update Workspace')
-	printOption('RP', 'Release Patches')
+	printOption('UW', 'Update Workspace', 'DS', 'Distribute & Send via FTP')
+	printOption('RP', 'Release Patches', 'DSC', 'Distribute & Send to Citra')
 	
 	print()
 	printCategory('Options')
@@ -668,16 +841,24 @@ def menu():
 	elif script == 'SW': SW(original_language, force_override)
 	elif script == 'UW': UW(original_language, force_override)
 	elif script == 'RP': RP(original_language)
+	elif script == 'EG': EG()
+	elif script == 'RG': RG()
+	elif script == 'DS': DS(original_language, force_override)
+	elif script == 'DSC': DSC(original_language, force_override)
 	elif script in ['EXIT', 'CLOSE', 'QUIT', ':Q']: return
 	else: menu()
 
 def main():
 	try:
-		system('cls')
-		system('mode con: cols=%d lines=%d' % (w+m+4+m, 41)) # SCREEN WIDTH AND HEIGHT
+		cls()
+		rzs()
 		checkUpdates()
 		checkTools()
 		menu()
+	except KeyboardInterrupt as e:
+		print('KeyboardInterrupt')
+		print()
+		input('Press Enter to exit...')
 	except Exception:
 		import traceback
 		traceback.print_exc()

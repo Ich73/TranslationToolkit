@@ -15,7 +15,7 @@
 """
 
 from os import listdir, walk, sep, remove, rename, makedirs
-from os.path import join, exists, isdir, splitext, dirname, basename, normpath
+from os.path import join, exists, isdir, splitext, dirname, basename, normpath, abspath
 from shutil import copyfile
 from hashlib import md5
 import re
@@ -216,9 +216,9 @@ def loopFiles(folders, original_language = None):
 ## Apply ##
 ###########
 
-def applyPatches(original_language = 'JA', force_override = False):
+def applyPatches(xdelta, original_language = 'JA', force_override = False):
 	ctr  = applyPatPatches(original_language, force_override)
-	ctr2 = applyXDeltaPatches(original_language, force_override)
+	ctr2 = applyXDeltaPatches(xdelta, original_language, force_override)
 	for k, v in ctr2.items(): ctr[k] = ctr.get(k, 0) + v
 	print()
 	if VERBOSE >= 1 and ctr.get('create', 0) > 0 or VERBOSE >= 3: print('Created %d files.' % ctr.get('create', 0))
@@ -380,11 +380,11 @@ def applyPatPatches(original_language, force_override):
 				rename(temp_output_save_file, output_save_file)
 	return ctr
 
-def applyXDeltaPatches(original_language, force_override):
+def applyXDeltaPatches(xdelta, original_language, force_override):
 	""" Creates .* files from .*.xdelta patches and the original .* files. """
 	
 	def applyXDelta(orig_file, patch_file, output_file):
-		run(['xdelta', '-f', '-d', '-s', orig_file, patch_file, output_file])
+		run([abspath(xdelta), '-f', '-d', '-s', orig_file, patch_file, output_file])
 	
 	ctr = dict()
 	folders = dict(zip(Params.xdeltaFolders().keys(), ['.xdelta']*len(Params.xdeltaFolders())))
@@ -431,9 +431,9 @@ def applyXDeltaPatches(original_language, force_override):
 ## Create ##
 ############
 
-def createPatches(original_language = 'JA', force_override = False):
+def createPatches(xdelta, original_language = 'JA', force_override = False):
 	ctr  = createPatPatches(original_language, force_override)
-	ctr2 = createXDeltaPatches(original_language, force_override)
+	ctr2 = createXDeltaPatches(xdelta, original_language, force_override)
 	for k, v in ctr2.items(): ctr[k] = ctr.get(k, 0) + v
 	print()
 	if VERBOSE >= 1 and ctr.get('create', 0) > 0 or VERBOSE >= 3: print('Created %d patches.' % ctr.get('create', 0))
@@ -586,11 +586,11 @@ def createPatPatches(original_language, force_override):
 				createPat(patch_file)
 	return ctr
 
-def createXDeltaPatches(original_language, force_override):
+def createXDeltaPatches(xdelta, original_language, force_override):
 	""" Creates .*.xdelta patches from pairs of .* files. """
 	
 	def createXDelta(orig_file, edit_file, patch_file):
-		run(['xdelta', '-f', '-s', orig_file, edit_file, patch_file])
+		run([abspath(xdelta), '-f', '-s', orig_file, edit_file, patch_file])
 	
 	ctr = dict()
 	for _, edit_file, orig_folder in loopFiles(Params.xdeltaFolders(), original_language):

@@ -3,15 +3,18 @@
 <<<
 """
 
-from os import makedirs, listdir, walk, remove, getenv, rename
-from os.path import join, normpath, sep, exists, isdir, dirname, basename, splitext, commonprefix, relpath
+from os import makedirs, listdir, walk, remove, rename, stat, chmod
+from os.path import join, normpath, sep, exists, isdir, dirname, basename, splitext, commonprefix, relpath, abspath
+from stat import S_IXUSR, S_IXGRP, S_IXOTH
 from subprocess import run, PIPE, STDOUT, DEVNULL
 from zipfile import ZipFile
+from tarfile import open as TarFile
 from io import BytesIO
 from urllib.request import urlopen
 from tempfile import mkdtemp
 from shutil import move, rmtree, copyfile, copytree
 import re
+import ssl
 
 from TranslationPatcher import hash, splitFolder, joinFolder, Params
 
@@ -23,20 +26,21 @@ VERBOSE = 1
 ## Tools ##
 ###########
 
-def checkTool(command, target_version):
-	""" Uses the given [command] to get the version of a tool
-		and returns true if the version matches the [target_version].
+def checkTool(tool, target_version, args = ''):
+	""" Checks the version of the given [tool] by calling it using
+		the given [args] and returns true if the version matches
+		the [target_version], false otherwise.
 	"""
-	proc = run(command, stdout=PIPE, stderr=STDOUT, shell=True)
+	proc = run(' '.join((abspath(tool), args)), shell=True, stdout=PIPE, stderr=STDOUT)
 	output = proc.stdout.decode('UTF-8')
 	match = re.search(r'\d+(\.\d+)+\w*', output)
 	version = match.group() if match else None
 	return version == target_version
 
-def downloadExe(download_url, filename):
-	""" Downloads an exe file form the given [download_url], puts it in the current directory
-		and renames it to [filename].
-		If the download is a zip file it uses the first exe file found in the archive.
+def downloadTool(download_url, filename):
+	""" Downloads an executable from the given [download_url],
+		puts it in the current directory and renames it to [filename].
+		If the download is a zip or tar file it uses the first executable found in the archive.
 	"""
 	# remove file if existent
 	if exists(filename):
@@ -47,24 +51,36 @@ def downloadExe(download_url, filename):
 	print('Downloading', basename(download_url))
 	print(' ', 'from', download_url)
 	type = splitext(download_url)[1]
-	with urlopen(download_url) as url: data = url.read()
+	with urlopen(download_url, context=ssl._create_unverified_context()) as url: data = url.read()
 	
-	# zip file
+	# zip archive
 	if type == '.zip':
 		with ZipFile(BytesIO(data)) as zip:
-			file = next((file for file in zip.infolist() if splitext(file.filename)[1] == '.exe'), None)
-			if not file: raise Exception('The downloaded zip file does not contain an exe file.')
+			file = next((file for file in zip.infolist() if splitext(file.filename)[1] == splitext(filename)[1]), None)
+			if not file: raise Exception('The downloaded zip archive does not contain a suitable executable.')
 			print('Extracting', basename(file.filename))
 			zip.extract(file)
 			rename(basename(file.filename), filename)
 	
-	# exe
-	elif type == '.exe':
+	# tar archive
+	elif type in ['.tar', '.gz']:
+		with TarFile(fileobj=BytesIO(data)) as tar:
+			file = next((file for file in tar.getmembers() if splitext(file.name)[1] == splitext(filename)[1]), None)
+			if not file: raise Exception('The downloaded tar archive does not contain a suitable executable.')
+			print('Extracting', basename(file.name))
+			tar.extract(file)
+			rename(basename(file.name), filename)
+	
+	# executable
+	elif type in ['.exe', '']:
 		with open(filename, 'wb') as file:
 			file.write(data)
 	
 	# not supported
-	else: raise Exception('The download link does not point towards a zip or exe file.')
+	else: raise Exception('The download link does not point towards a zip archive, tar archive or executable.')
+	
+	# make executable
+	chmod(filename, stat(filename).st_mode | S_IXUSR | S_IXGRP | S_IXOTH)
 	
 	# success
 	print('Downloaded', filename)
@@ -81,7 +97,7 @@ def downloadAndExtractPatches(download_url):
 		tempdir = mkdtemp()
 		
 		# download patches
-		with urlopen(download_url) as url: data = url.read()
+		with urlopen(download_url, context=ssl._create_unverified_context()) as url: data = url.read()
 		
 		# extract patches to temporary folder and move them
 		ctr = dict()
@@ -230,15 +246,14 @@ def prepareReleasePatches(cia_dir, original_language = 'JA'):
 	
 	if VERBOSE >= 1: print('Saved %d files.' % ctr)
 
-def createReleasePatches(cia_dir, patches_filename, original_language = 'JA'):
+def createReleasePatches(cia_dir, patches_filename, xdelta, dstool, original_language = 'JA'):
 	try:
-		copyfile('3dstool.exe', join(cia_dir, '3dstool.exe'))
 		# create banner patch
 		if exists(join(cia_dir, 'ExtractedBanner')):
 			# rebuild banner
 			if VERBOSE >= 1: print('Rebuilding banner...')
 			rename(join(cia_dir, 'ExtractedBanner', 'banner.cgfx'), join(cia_dir, 'ExtractedBanner', 'banner0.bcmdl'))
-			run('3dstool -c -t banner -f banner.bin --banner-dir ExtractedBanner', cwd=cia_dir, stdout=DEVNULL, stderr=DEVNULL)
+			run([abspath(dstool), '-ctf', 'banner', 'banner.bin', '--banner-dir', 'ExtractedBanner'], cwd=cia_dir, stdout=DEVNULL, stderr=DEVNULL)
 			rename(join(cia_dir, 'ExtractedBanner', 'banner0.bcmdl'), join(cia_dir, 'ExtractedBanner', 'banner.cgfx'))
 			# copy to exeFS (if you want to create a CIA file)
 			if exists(join(cia_dir, 'ExtractedExeFS')):
@@ -247,7 +262,7 @@ def createReleasePatches(cia_dir, patches_filename, original_language = 'JA'):
 			# create patch
 			if hash(join(cia_dir, 'banner.bin')) != hash(join(cia_dir, 'banner-%s.bin' % original_language)):
 				if VERBOSE >= 1: print('Creating banner patch...')
-				run('xdelta -f -s banner-%s.bin banner.bin banner.xdelta' % original_language, cwd=cia_dir)
+				run([abspath(xdelta), '-f', '-s', 'banner-%s.bin' % original_language, 'banner.bin', 'banner.xdelta'], cwd=cia_dir)
 				if VERBOSE >= 1: print()
 			else:
 				if VERBOSE >= 2:
@@ -260,7 +275,7 @@ def createReleasePatches(cia_dir, patches_filename, original_language = 'JA'):
 				# create patch
 				if hash(join(cia_dir, 'ExtractedExeFS', '%s.bin' % item)) != hash(join(cia_dir, '%s-%s.bin' % (item, original_language))):
 					if VERBOSE >= 1: print('Creating %s patch...' % item)
-					run('xdelta -f -s %s-%s.bin ExtractedExeFS\\%s.bin %s.xdelta' % (item, original_language, item, item), cwd=cia_dir)
+					run([abspath(xdelta), '-f', '-s', '%s-%s.bin' % (item, original_language), join('ExtractedExeFS', '%s.bin' % item), '%s.xdelta' % item], cwd=cia_dir)
 					if VERBOSE >= 1: print()
 				else:
 					if VERBOSE >= 2:
@@ -271,12 +286,11 @@ def createReleasePatches(cia_dir, patches_filename, original_language = 'JA'):
 		if exists(join(cia_dir, 'ExtractedRomFS')):
 			# rebuild romFS
 			if VERBOSE >= 1: print('Rebuilding RomFS...')
-			run('3dstool -c -t romfs -f CustomRomFS.bin --romfs-dir ExtractedRomFS', cwd=cia_dir, stdout=DEVNULL, stderr=DEVNULL)
+			run([abspath(dstool), '-ctf', 'romfs', 'CustomRomFS.bin', '--romfs-dir', 'ExtractedRomFS'], cwd=cia_dir, stdout=DEVNULL, stderr=DEVNULL)
 			# create patch
 			if VERBOSE >= 1: print('Creating RomFS patch...')
-			run('xdelta -f -s DecryptedRomFS.bin CustomRomFS.bin RomFS.xdelta', cwd=cia_dir)
+			run([abspath(xdelta), '-f', '-s', 'DecryptedRomFS.bin', 'CustomRomFS.bin', 'RomFS.xdelta'], cwd=cia_dir)
 			if VERBOSE >= 1: print()
-		remove(join(cia_dir, '3dstool.exe'))
 		
 		# archive patches
 		directory = dirname(patches_filename)
