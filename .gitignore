@@ -7,7 +7,6 @@
 !/requirements.txt
 !/FileReplacer.py
 !/GameManager.py
-!/SaveChanger.py
 !/SendToCitra.py
 !/SendViaFTP.py
 !/WorkspaceManager.py

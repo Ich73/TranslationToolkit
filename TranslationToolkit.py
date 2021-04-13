@@ -14,11 +14,10 @@ import platform
 import ssl
 import re
 
-from TranslationPatcher import applyPatches, createPatches, distribute
+from TranslationPatcher import applyPatches, createPatches, distribute, createSaves
 from SendViaFTP import sendFiles as sendFilesViaFTP
 from SendToCitra import sendFiles as sendFilesToCitra
 from FileReplacer import replaceFiles
-from SaveChanger import updateTableInSave
 from WorkspaceManager import downloadAndExtractPatches, doUpdateActions, copyOriginalFiles
 from WorkspaceManager import copyPatchedFiles, prepareReleasePatches, createReleasePatches
 from WorkspaceManager import checkTool, downloadTool
@@ -418,63 +417,6 @@ def DSC(original_language, force_override):
 	
 	showEnd()
 
-def RF():
-	cls()
-	
-	while True:
-		source_dir = askParamter(
-			name = 'source folder',
-			description = ['The folder containing the files to be copied.'],
-			key = 'RF.source'
-		)
-		if not isdir(source_dir): continue
-		source_files = [join(source_dir, f) for f in listdir(source_dir)]
-		break
-	
-	while True:
-		destination_dir = askParamter(
-			name = 'destination folder',
-			description = ['The folder in which to replace the files.'],
-			key = 'RF.dest'
-		)
-		if isdir(destination_dir): break
-	
-	print('Source Folder:', source_dir)
-	print('Destination Folder:', destination_dir)
-	print()
-	
-	if not verifyStart(): return
-	replaceFiles(source_files=source_files, destination_dir=destination_dir)
-	showEnd()
-
-def UD():
-	cls()
-	
-	while True:
-		source_dir = askParamter(
-			name = 'save folder',
-			description = ['The folder containing the save files to update.'],
-			key = 'UD.source',
-			default = '.'
-		)
-		if isdir(source_dir): break
-	
-	while True:
-		table_file = askParamter(
-			name = 'table file',
-			description = ['The updated decoding table file.'],
-			key = 'UD.table'
-		)
-		if isfile(table_file): break
-	
-	print('Save Folder:', source_dir)
-	print('Table File:', table_file)
-	print()
-	
-	if not verifyStart(): return
-	updateTableInSave(save_dir=source_dir, table_file=table_file)
-	showEnd()
-
 def SW(original_language, force_override):
 	cls()
 	
@@ -668,6 +610,53 @@ def RP(original_language):
 	rmtree(temp_dir)
 	showEnd()
 
+def RF():
+	cls()
+	
+	while True:
+		source_dir = askParamter(
+			name = 'source folder',
+			description = ['The folder containing the files to be copied.'],
+			key = 'RF.source'
+		)
+		if not isdir(source_dir): continue
+		source_files = [join(source_dir, f) for f in listdir(source_dir)]
+		break
+	
+	while True:
+		destination_dir = askParamter(
+			name = 'destination folder',
+			description = ['The folder in which to replace the files.'],
+			key = 'RF.dest'
+		)
+		if isdir(destination_dir): break
+	
+	print('Source Folder:', source_dir)
+	print('Destination Folder:', destination_dir)
+	print()
+	
+	if not verifyStart(): return
+	replaceFiles(source_files=source_files, destination_dir=destination_dir)
+	showEnd()
+
+def CS(original_language, force_override):
+	cls()
+	
+	while True:
+		table_file = askParamter(
+			name = 'table file',
+			description = ['The decoding table file.'],
+			key = 'CS.table'
+		)
+		if isfile(table_file): break
+	
+	print('Table File:', table_file)
+	print()
+	
+	if not verifyStart(): return
+	createSaves(table_file=table_file, original_language=original_language, force_override=force_override)
+	showEnd()
+
 def EG():
 	cls()
 	
@@ -801,11 +790,11 @@ def menu():
 	printInfo('Sends the folder from the \'D\' script to the 3DS for Luma\'s LayeredFS patching.')
 	printOption('SC', 'Send to Citra')
 	printInfo('Sends the folder from the \'D\' script to Citra\'s mod folder for LayeredFS patching.')
-	printOption('RF', 'Replace Files', 'EG', 'Extract Game')
-	printOption('UD', 'Update Decoding Tables', 'RG', 'Rebuild Game')
-	printOption('SW', 'Setup Workspace')
-	printOption('UW', 'Update Workspace', 'DS', 'Distribute & Send via FTP')
-	printOption('RP', 'Release Patches', 'DSC', 'Distribute & Send to Citra')
+	printOption('SW', 'Setup Workspace', 'EG', 'Extract Game')
+	printOption('UW', 'Update Workspace', 'RG', 'Rebuild Game')
+	printOption('RP', 'Release Patches')
+	printOption('RF', 'Replace Files', 'DS', 'Distribute & Send via FTP')
+	printOption('CS', 'Create Saves', 'DSC', 'Distribute & Send to Citra')
 	
 	print()
 	printCategory('Options')
@@ -836,11 +825,11 @@ def menu():
 	elif script == 'D': D(original_language, force_override)
 	elif script == 'S': S(force_override)
 	elif script == 'SC': SC(force_override)
-	elif script == 'RF': RF()
-	elif script == 'UD': UD()
 	elif script == 'SW': SW(original_language, force_override)
 	elif script == 'UW': UW(original_language, force_override)
 	elif script == 'RP': RP(original_language)
+	elif script == 'RF': RF()
+	elif script == 'CS': CS(original_language, force_override)
 	elif script == 'EG': EG()
 	elif script == 'RG': RG()
 	elif script == 'DS': DS(original_language, force_override)

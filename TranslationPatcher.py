@@ -22,7 +22,7 @@ import re
 from zipfile import ZipFile
 from gzip import GzipFile
 import json
-from BinJEditor.JTools import parseBinJ, createBinJ, parseE, createE, parseDatJ, createDatJ, parseDatE, parseTabE, parseSpt
+from BinJEditor.JTools import parseDecodingTable, parseBinJ, createBinJ, parseE, createE, parseDatJ, createDatJ, createTabJ, parseDatE, createDatE, parseTabE, createTabE, parseSpt, createSpt, invertDict
 from tempfile import gettempdir as tempdir
 from subprocess import run
 
@@ -893,3 +893,160 @@ def distributeOtherFiles(languages, versions, original_language, destination_dir
 					makedirs(dirname(dest_file), exist_ok=True)
 					copyfile(source_file, dest_file)
 	return ctr
+
+
+###########
+## Tools ##
+###########
+
+def createSaves(table_file, original_language = 'JA', force_override = False):
+	# parse decoding table
+	try:
+		table = parseDecodingTable(table_file)
+		specialj = createTabJ(table['special'], hexValue = False)
+		decode = table['decode']
+		encode = table['encode']
+		decode = {k: decode[k] for k in set(decode) - set(invertDict(encode))} # remove every char that is in encode as well
+		decodej = createTabJ(decode, hexValue = True)
+		encodej = createTabJ(encode, hexValue = True)
+	except Exception as e:
+		print('Error:', str(e))
+		return
+	
+	# iterate over all patch files
+	ctr = dict()
+	folders = {k: v[3] for k, v in Params.patFolders().items()}
+	for folder, patch_file, orig_folder in loopFiles(folders, original_language):
+		simplename = extpath(patch_file)
+		mode, ext_orig, ext_save, ext_patch = Params.patFolders()[folder]
+		msg_prefix = ' * %s:' % join(*simplename[:-1], splitext(simplename[-1])[0] + ext_save)
+		
+		# find corresponding original file
+		orig_file = join(orig_folder, *simplename[:-1], splitext(simplename[-1])[0] + ext_orig)
+		if not exists(orig_file):
+			if VERBOSE >= 2: print(' !', 'Warning: Original file not found:', join(*extpath(orig_file)))
+			continue
+		
+		# define output save file
+		msg_prefix = ' * %s:' % join(*simplename[:-1], splitext(simplename[-1])[0] + ext_save)
+		output_save_file = patch_file[:-len(ext_patch)] + ext_save
+		
+		# check if output save file exists
+		if exists(output_save_file):
+			if force_override:
+				# -> update file
+				if VERBOSE >= 2: print(msg_prefix, 'update')
+				ctr['update'] = ctr.get('update', 0) + 1
+			else:
+				# -> keep old file
+				if VERBOSE >= 3: print(msg_prefix, 'keep')
+				ctr['keep'] = ctr.get('keep', 0) + 1
+				continue
+		else:
+			# -> create new file
+			if VERBOSE >= 2: print(msg_prefix, 'create')
+			ctr['create'] = ctr.get('create', 0) + 1
+		
+		# read original file
+		try:
+			if mode == 'binJ':
+				with open(orig_file, 'rb') as file: bin = file.read()
+				orig_data, extra = parseBinJ(bin, Params.SEP())
+			elif mode == 'e':
+				with GzipFile(orig_file, 'r') as file: bin = file.read()
+				orig_data, extra = parseE(bin, Params.SEP())
+		except:
+			print(' !', 'Error: Parsing %s file failed:' % mode, join(*extpath(orig_file)))
+			return
+		
+		# read patch file
+		with open(patch_file, 'r', encoding = 'ASCII') as file: patj = file.read()
+		edit_data = parseDatJ(patj)
+		
+		# check if compatible
+		if len(edit_data) != len(orig_data):
+			print(' !', 'Warning: Lengths of original file and patch differ:', join(*extpath(orig_file)))
+			if len(edit_data) > len(orig_data): edit_data = edit_data[:len(orig_data)]
+			else: edit_data = edit_data + [b'']*(len(orig_data) - len(edit_data))
+		
+		# create data objects
+		origj = createDatJ(orig_data)
+		editj = createDatJ(edit_data)
+		
+		# save temporary files
+		orig_filename = join(tempdir(), 'orig.datJ')
+		with open(orig_filename, 'w', encoding = 'ASCII', newline = '\n') as file: file.write(origj)
+		edit_filename = join(tempdir(), 'edit.datJ')
+		with open(edit_filename, 'w', encoding = 'ASCII', newline = '\n') as file: file.write(editj)
+		sep_filename = join(tempdir(), 'SEP.bin')
+		with open(sep_filename, 'wb') as file: file.write(Params.SEP())
+		special_filename = join(tempdir(), 'special.tabJ')
+		with open(special_filename, 'w', encoding = 'UTF-8', newline = '\n') as file: file.write(specialj)
+		decode_filename = join(tempdir(), 'decode.tabJ')
+		with open(decode_filename, 'w', encoding = 'ASCII', newline = '\n') as file: file.write(decodej)
+		encode_filename = join(tempdir(), 'encode.tabJ')
+		with open(encode_filename, 'w', encoding = 'ASCII', newline = '\n') as file: file.write(encodej)
+		
+		# create data objects and save temporary files for savJ
+		if mode == 'binJ':
+			prefix_filename = join(tempdir(), 'prefix.bin')
+			with open(prefix_filename, 'wb') as file: file.write(extra['prefix'])
+		
+		# create data objects and save temporary files for savE
+		elif mode == 'e':
+			prefix_filename = join(tempdir(), 'prefix.bin')
+			with open(prefix_filename, 'wb') as file: file.write(extra['prefix'])
+			header = createDatE(extra['header'])
+			header_filename = join(tempdir(), 'header.datE')
+			with open(header_filename, 'w', encoding = 'ASCII', newline = '\n') as file: file.write(header)
+			scripts = createSpt(extra['scripts'])
+			scripts_filename = join(tempdir(), 'scripts.spt')
+			with open(scripts_filename, 'w', encoding = 'ASCII', newline = '\n') as file: file.write(scripts)
+			links = createTabE(extra['links'])
+			links_filename = join(tempdir(), 'links.tabE')
+			with open(links_filename, 'w', encoding = 'ASCII', newline = '\n') as file: file.write(links)
+		
+		# save savJ
+		if mode == 'binJ':
+			with ZipFile(output_save_file, 'w') as file:
+				file.write(orig_filename, arcname=basename(orig_filename))
+				file.write(edit_filename, arcname=basename(edit_filename))
+				file.write(sep_filename, arcname=basename(sep_filename))
+				file.write(special_filename, arcname=basename(special_filename))
+				file.write(decode_filename, arcname=basename(decode_filename))
+				file.write(encode_filename, arcname=basename(encode_filename))
+				file.write(prefix_filename, arcname=basename(prefix_filename))
+		
+		# save savE
+		elif mode == 'e':
+			with ZipFile(output_save_file, 'w') as file:
+				file.write(orig_filename, arcname=basename(orig_filename))
+				file.write(edit_filename, arcname=basename(edit_filename))
+				file.write(sep_filename, arcname=basename(sep_filename))
+				file.write(special_filename, arcname=basename(special_filename))
+				file.write(decode_filename, arcname=basename(decode_filename))
+				file.write(encode_filename, arcname=basename(encode_filename))
+				file.write(prefix_filename, arcname=basename(prefix_filename))
+				file.write(header_filename, arcname=basename(header_filename))
+				file.write(scripts_filename, arcname=basename(scripts_filename))
+				file.write(links_filename, arcname=basename(links_filename))
+		
+		# remove temporary files
+		remove(orig_filename)
+		remove(edit_filename)
+		remove(sep_filename)
+		remove(special_filename)
+		remove(decode_filename)
+		remove(encode_filename)
+		if mode == 'binJ':
+			remove(prefix_filename)
+		elif mode == 'e':
+			remove(prefix_filename)
+			remove(header_filename)
+			remove(scripts_filename)
+			remove(links_filename)
+	
+	print()
+	if VERBOSE >= 1 and ctr.get('create', 0) > 0 or VERBOSE >= 3: print('Created %d files.' % ctr.get('create', 0))
+	if VERBOSE >= 1: print('Updated %d files.' % ctr.get('update', 0))
+	if VERBOSE >= 3: print('Kept %d files.' % ctr.get('keep',   0))

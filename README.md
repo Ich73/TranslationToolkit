@@ -76,16 +76,6 @@ The script requires you to specify the following values to properly send the fil
 _Options:_
   * `-f`: Force overriding all files even if their hashes match (e.g. `SC -f`).
 
-### Replace Files (RF)
-This script searches the given destination folder for files with the same name as the files in the given source folder and replaces them. This can be used to update multiple `.bclim` files at once when editing `.arc` files.
-
-### Update Decoding Tables (UD)
-This script is used to update the decoding table stored in `.savJ` and `.savE` save files.  
-  
-The script requires you to specify the following values:
-  * `Save Folder`: The folder containing the save files you want to update. You can enter `.` to update all files in the directory where Translation Toolkit is.
-  * `Table File`: The filename of the updated decoding table. This table will be stored inside the save files.
-
 ### Setup Workspace (SW)
 This script is used to download the latest patches from the repository, copy the required original files from the extracted CIA and run the `AP` script.
   
@@ -118,6 +108,24 @@ The script requires you to specify the following values:
 
 _Options:_
   * `-o=<XY>`: Set the original language to `<XY>` (e.g. `RP -o=JA`).
+
+### Replace Files (RF)
+This script searches the given destination folder for files with the same name as the files in the given source folder and replaces them. This can be used to update multiple `.bclim` files at once when editing `.arc` files.
+
+### Create Saves (CS)
+This script is used to apply `.patJ` and `.patE` patches to all files from the original game in order to create `.savJ` and `.savE` files.  
+It can also be used to update the decoding tables used in those files by enabling the `-f` option.  
+  
+It searches internally specified folders using the naming scheme `<folder>_<language>` (e.g. `Message_EN`) for patches and applies them to the files with matching names from the folder `<folder>_<originalLanguage>` (e.g. `Message_JA`).  
+A `<file>.patJ` patch will create `<file>.savJ` and a `<file>.patE` patch will `<file>.savE`.  
+No files will be overwritten by default. The default original language is `JA`.  
+  
+The script requires you to specify the following values:
+  * `Table File`: The filename of the updated decoding table. This table will be stored inside the save files.
+  
+_Options:_
+  * `-f`: Force overriding all files even if they exist (e.g. `CS -f`).
+  * `-o=<XY>`: Set the original language to `<XY>` (e.g. `CS -o=JA`).
 
 ### Extract Game (EG)
 This script is used to extract a `.cia` or `.3ds` file in order to use the extracted folder for the `SW` script.
