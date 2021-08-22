@@ -422,7 +422,7 @@ def SW(original_language, force_override):
 	
 	download_url_or_zip_file = askParamter(
 		name = 'download URL or zip file',
-		description = ['The url for downloading all patches as a zip file, or the full path to a zip file.'],
+		description = ['The url for downloading all patches as a zip file, or the full path to a local zip file.'],
 		key = 'UW.url'
 	)
 	is_download_url = not exists(download_url_or_zip_file)
@@ -514,7 +514,7 @@ def UW(original_language, force_override):
 	
 	download_url_or_zip_file = askParamter(
 		name = 'download URL or zip file',
-		description = ['The url for downloading all patches as a zip file, or the full path to a zip file.'],
+		description = ['The url for downloading all patches as a zip file, or the full path to a local zip file.'],
 		key = 'UW.url'
 	)
 	is_download_url = not exists(download_url_or_zip_file)
