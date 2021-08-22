@@ -80,7 +80,7 @@ _Options:_
 This script is used to download the latest patches from the repository, copy the required original files from the extracted CIA and run the `AP` script.
   
 The script requires you to specify the following values:
-  * `Download URL`: The url for downloading all patches as a zip file.
+  * `Download URL or Zip File`: The url for downloading all patches as a zip file, or the full path to a local zip file.
   * `CIA Folder`: The folder containing the extracted CIA file.
 
 _Options:_
@@ -91,7 +91,7 @@ _Options:_
 This script is used to download the latest patches from the repository and run the `AP` script.
   
 The script requires you to specify the following values:
-  * `Download URL`: The url for downloading all patches as a zip file.
+  * `Download URL or Zip File`: The url for downloading all patches as a zip file, or the full path to a local zip file.
 
 _Options:_
   * `-f`: Force overriding all files even if their hashes match (e.g. `UW -f`).
