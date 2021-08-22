@@ -32,7 +32,7 @@ def checkTool(tool, target_version, args = ''):
 		the [target_version], false otherwise.
 	"""
 	proc = run(' '.join((abspath(tool), args)), shell=True, stdout=PIPE, stderr=STDOUT)
-	output = proc.stdout.decode('UTF-8')
+	output = proc.stdout.decode('UTF-8', errors='replace')
 	match = re.search(r'\d+(\.\d+)+\w*', output)
 	version = match.group() if match else None
 	return version == target_version
