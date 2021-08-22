@@ -18,7 +18,7 @@ from TranslationPatcher import applyPatches, createPatches, distribute, createSa
 from SendViaFTP import sendFiles as sendFilesViaFTP
 from SendToCitra import sendFiles as sendFilesToCitra
 from FileReplacer import replaceFiles
-from WorkspaceManager import downloadAndExtractPatches, doUpdateActions, copyOriginalFiles
+from WorkspaceManager import downloadAndExtractPatches, extractPatches, doUpdateActions, copyOriginalFiles
 from WorkspaceManager import copyPatchedFiles, prepareReleasePatches, createReleasePatches
 from WorkspaceManager import checkTool, downloadTool
 from GameManager import extractGame, rebuildGame
@@ -420,11 +420,12 @@ def DSC(original_language, force_override):
 def SW(original_language, force_override):
 	cls()
 	
-	download_url = askParamter(
-		name = 'download URL',
-		description = ['The url for downloading all patches as a zip file.'],
+	download_url_or_zip_file = askParamter(
+		name = 'download URL or zip file',
+		description = ['The url for downloading all patches as a zip file, or the full path to a zip file.'],
 		key = 'UW.url'
 	)
+	is_download_url = not exists(download_url_or_zip_file)
 	
 	while True:
 		cia_dir = askParamter(
@@ -462,17 +463,24 @@ def SW(original_language, force_override):
 	Config.set('SW.updates', updates)
 	
 	print('CIA Folder:', cia_dir)
-	print('Download URL:', download_url)
+	if is_download_url: print('Download URL:', download_url_or_zip_file)
+	else: print('Zip File:', download_url_or_zip_file)
 	for ver, dir in updates:
 		print('Update %s Folder:' % ver, dir)
 	print()
 	
 	if not verifyStart(): return
 	
-	print('~~ Download Patches ~~')
-	if not downloadAndExtractPatches(download_url):
-		showEnd()
-		return
+	if is_download_url:
+		print('~~ Download Patches ~~')
+		if not downloadAndExtractPatches(download_url_or_zip_file):
+			showEnd()
+			return
+	else:
+		print('~~ Extract Patches ~~')
+		if not extractPatches(download_url_or_zip_file):
+			showEnd()
+			return
 	
 	print()
 	print()
@@ -504,21 +512,29 @@ def SW(original_language, force_override):
 def UW(original_language, force_override):
 	cls()
 	
-	download_url = askParamter(
-		name = 'download URL',
-		description = ['The url for downloading all patches as a zip file.'],
+	download_url_or_zip_file = askParamter(
+		name = 'download URL or zip file',
+		description = ['The url for downloading all patches as a zip file, or the full path to a zip file.'],
 		key = 'UW.url'
 	)
+	is_download_url = not exists(download_url_or_zip_file)
 	
-	print('Download URL:', download_url)
+	if is_download_url: print('Download URL:', download_url_or_zip_file)
+	else: print('Zip File:', download_url_or_zip_file)
 	print()
 	
 	if not verifyStart(): return
 	
-	print('~~ Download Patches ~~')
-	if not downloadAndExtractPatches(download_url):
-		showEnd()
-		return
+	if is_download_url:
+		print('~~ Download Patches ~~')
+		if not downloadAndExtractPatches(download_url_or_zip_file):
+			showEnd()
+			return
+	else:
+		print('~~ Extract Patches ~~')
+		if not extractPatches(zip_file=download_url_or_zip_file):
+			showEnd()
+			return
 	
 	print()
 	print()

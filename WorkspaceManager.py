@@ -93,16 +93,21 @@ def downloadTool(download_url, filename):
 
 def downloadAndExtractPatches(download_url):
 	try:
+		with urlopen(download_url, context=ssl._create_unverified_context()) as url: data = url.read()
+		return extractPatches(BytesIO(data))
+	except Exception as e:
+		print('Error:', str(e))
+		return False
+
+def extractPatches(zip_file):
+	try:
 		# create temporary folder
 		tempdir = mkdtemp()
-		
-		# download patches
-		with urlopen(download_url, context=ssl._create_unverified_context()) as url: data = url.read()
 		
 		# extract patches to temporary folder and move them
 		ctr = dict()
 		folders = list()
-		with ZipFile(BytesIO(data)) as zip:
+		with ZipFile(zip_file) as zip:
 			for file in zip.infolist():
 				if file.is_dir(): continue
 				filename = file.filename
@@ -122,10 +127,10 @@ def downloadAndExtractPatches(download_url):
 					if directory: makedirs(directory, exist_ok=True)
 					move(extracted_file, simplename)
 					ctr['update'] = ctr.get('update', 0) + 1
-				ctr['download'] = ctr.get('download', 0) + 1
+				ctr['extract'] = ctr.get('extract', 0) + 1
 		if VERBOSE >= 1:
 			print()
-			print('Downloaded %d patches.' % ctr.get('download', 0))
+			print('Extracted %d patches.' % ctr.get('extract', 0))
 			print('Updated %d patches.'    % ctr.get('update', 0))
 		
 		# delete temporary folder
