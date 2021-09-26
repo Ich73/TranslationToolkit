@@ -42,16 +42,19 @@ def downloadTool(download_url, filename):
 		puts it in the current directory and renames it to [filename].
 		If the download is a zip or tar file it uses the first executable found in the archive.
 	"""
-	# remove file if existent
-	if exists(filename):
-		print('Updating', filename)
-		remove(filename)
-	
 	# get type and download data
 	print('Downloading', basename(download_url))
 	print(' ', 'from', download_url)
 	type = splitext(download_url)[1]
-	with urlopen(download_url, context=ssl._create_unverified_context()) as url: data = url.read()
+	
+	try:
+		with urlopen(download_url, context=ssl._create_unverified_context()) as url: data = url.read()
+	except Exception as e:
+		if exists(filename): # if tool exists with wrong version, keep it
+			print('Error:', str(e))
+			print('Keep old', basename(filename))
+			return
+		raise e # otherwise raise exception
 	
 	# zip archive
 	if type == '.zip':
@@ -59,6 +62,7 @@ def downloadTool(download_url, filename):
 			file = next((file for file in zip.infolist() if splitext(file.filename)[1] == splitext(filename)[1]), None)
 			if not file: raise Exception('The downloaded zip archive does not contain a suitable executable.')
 			print('Extracting', basename(file.filename))
+			if exists(filename): remove(filename)
 			zip.extract(file)
 			rename(basename(file.filename), filename)
 	
@@ -68,11 +72,13 @@ def downloadTool(download_url, filename):
 			file = next((file for file in tar.getmembers() if splitext(file.name)[1] == splitext(filename)[1]), None)
 			if not file: raise Exception('The downloaded tar archive does not contain a suitable executable.')
 			print('Extracting', basename(file.name))
+			if exists(filename): remove(filename)
 			tar.extract(file)
 			rename(basename(file.name), filename)
 	
 	# executable
 	elif type in ['.exe', '']:
+		if exists(filename): remove(filename)
 		with open(filename, 'wb') as file:
 			file.write(data)
 	
