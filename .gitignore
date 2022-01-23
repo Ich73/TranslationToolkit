@@ -10,6 +10,7 @@
 !/SendToCitra.py
 !/SendViaFTP.py
 !/WorkspaceManager.py
+!/ToolManager.py
 !/TranslationPatcher.py
 !/TranslationToolkit.py
 !/TranslationToolkit.spec

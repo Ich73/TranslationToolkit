@@ -20,7 +20,7 @@ from SendToCitra import sendFiles as sendFilesToCitra
 from FileReplacer import replaceFiles
 from WorkspaceManager import downloadAndExtractPatches, extractPatches, doUpdateActions, copyOriginalFiles
 from WorkspaceManager import copyPatchedFiles, prepareReleasePatches, createReleasePatches
-from WorkspaceManager import checkTool, downloadTool
+from ToolManager import checkTool, downloadTool
 from GameManager import extractGame, rebuildGame
 
 CONFIG_FILE = 'tt-config.json'
@@ -695,7 +695,7 @@ def EG():
 	print()
 	
 	if not verifyStart(): return
-	extractGame(game_file=game_file, game_dir=game_dir, dstool=TOOLS['3dstool'][opSys]['exe'], ctrtool=TOOLS['ctrtool'][opSys]['exe'])
+	for _ in extractGame(game_file=game_file, game_dir=game_dir, dstool=TOOLS['3dstool'][opSys]['exe'], ctrtool=TOOLS['ctrtool'][opSys]['exe']): pass
 	showEnd()
 
 def RG():
@@ -739,7 +739,7 @@ def RG():
 	print()
 	
 	if not verifyStart(): return
-	rebuildGame(game_dir=game_dir, game_file=game_file, version=version, dstool=TOOLS['3dstool'][opSys]['exe'], makerom=TOOLS['makerom'][opSys]['exe'])
+	for _ in rebuildGame(game_dir=game_dir, game_file=game_file, version=version, dstool=TOOLS['3dstool'][opSys]['exe'], makerom=TOOLS['makerom'][opSys]['exe']): pass
 	showEnd()
 
 
