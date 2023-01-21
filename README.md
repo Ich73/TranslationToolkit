@@ -2,7 +2,7 @@
 [![](https://img.shields.io/github/downloads/Ich73/TranslationToolkit/total?label=Downloads)](https://github.com/Ich73/TranslationToolkit/releases)
 [![](https://img.shields.io/github/license/Ich73/TranslationToolkit?label=License)](/LICENSE)
 # Translation Toolkit
-Translation Toolkit is a command line interface to simplify the workflow for translating 3DS games and releasing patches.  
+Translation Toolkit is a command line interface to simplify the workflow for translating 3DS games and releasing patches. A lite version without built-in support for `.binJ` and `.e` files can be found at [Ich73/TranslationToolkitLite](https://github.com/Ich73/TranslationToolkitLite).  
   
 It uses the following tools:
   * [xdelta](https://github.com/jmacd/xdelta-gpl) ([v3.1.0](https://github.com/jmacd/xdelta-gpl/releases/tag/v3.1.0))

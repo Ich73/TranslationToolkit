@@ -25,7 +25,7 @@ from GameManager import extractGame, rebuildGame
 
 CONFIG_FILE = 'tt-config.json'
 
-VERSION = 'v2.7.2'
+VERSION = 'v2.7.3'
 REPOSITORY = r'Ich73/TranslationToolkit'
 
 TOOLS = {
