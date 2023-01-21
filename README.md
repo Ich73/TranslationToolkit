@@ -168,7 +168,7 @@ When starting the program it searches for a file named `.ttparams` which defines
 
 ## For Developers
 ### Setup
-This program is written using [Python 3.8](https://www.python.org/downloads/release/python-383/). Addionally you need [`JTools.py`](https://github.com/Ich73/BinJEditor/blob/master/JTools.py) found in [BinJ Editor](https://github.com/Ich73/BinJEditor).
+This program is written using [Python 3.10.2](https://www.python.org/downloads/release/python-3102/). Addionally you need [`JTools.py`](https://github.com/Ich73/BinJEditor/blob/master/JTools.py) found in [BinJ Editor](https://github.com/Ich73/BinJEditor).
 
 ### Running
 You can run the program by using the command `python TranslationToolkit.py`.
